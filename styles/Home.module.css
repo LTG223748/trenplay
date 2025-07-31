@@ -1,0 +1,34 @@
+/* styles/Home.module.css */
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.heading {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: #7c3aed;
+  margin-bottom: 2rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+
+.card {
+  background: #1a1a2e;
+  padding: 1.5rem;
+  border-radius: 1.5rem;
+  box-shadow: 0 6px 36px rgba(0,0,0,0.16);
+  color: #fff;
+  transition: transform 0.18s;
+}
+
+.card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow: 0 12px 36px rgba(124,58,237,0.22);
+}

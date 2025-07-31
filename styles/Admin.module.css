@@ -1,0 +1,11 @@
+/* styles/Admin.module.css */
+
+.adminBanner {
+  background: linear-gradient(90deg, #7c3aed 0%, #ffc700 100%);
+  color: #fff;
+  padding: 1.25rem 2rem;
+  border-radius: 1rem;
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  box-shadow: 0 3px 12px rgba(124,58,237,0.14);
+}

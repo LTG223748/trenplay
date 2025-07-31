@@ -1,0 +1,27 @@
+/* styles/Leaderboard.module.css */
+
+.table {
+  width: 100%;
+  background: #181827;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(80, 63, 205, 0.12);
+}
+
+.thead {
+  background: #7c3aed;
+  color: #fff;
+  font-weight: 600;
+}
+
+.tr {
+  border-bottom: 1px solid #23233a;
+}
+
+.td, .th {
+  padding: 1rem;
+}
+
+.highlight {
+  color: #ffd700;
+  font-weight: 700;
+}

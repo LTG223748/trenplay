@@ -1,0 +1,23 @@
+[toolchain]
+package_manager = "yarn"
+anchor_version = "0.31.1"
+[features]
+resolution = true
+skip-lint = false
+
+[programs.localnet]
+trenbet_wager = "6LZ4YmJsjcSvn1cW6c2wiTohRwhuQnMdUdUEJcVQxKGS"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[workspace]
+members = ["programs/trenbet_wager"]
+
+[scripts]
+test = "yarn run mocha -t 1000000 tests/"
+
