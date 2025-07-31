@@ -1,1 +1,1 @@
-self.__REACT_LOADABLE_MANIFEST="{\"components/Header.tsx -> ./TokenBalance\":{\"id\":\"components/Header.tsx -> ./TokenBalance\",\"files\":[\"static/chunks/components_TokenBalance_tsx.js\"]},\"components/Header.tsx -> ./WalletConnect\":{\"id\":\"components/Header.tsx -> ./WalletConnect\",\"files\":[\"static/chunks/components_WalletConnect_tsx.js\"]}}"
+self.__REACT_LOADABLE_MANIFEST="{}"
