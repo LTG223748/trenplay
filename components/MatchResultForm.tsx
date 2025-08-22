@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { doc, updateDoc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { evaluateMatchOutcome } from '../utils/evaluateMatchOutcome';
-import { notify } from '../lib/notify'; // Make sure this path is correct!
+import notify from '../lib/notify'; // Make sure this path is correct!
 
 interface Props {
   matchId: string;

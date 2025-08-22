@@ -1,8 +1,12 @@
-# OS
+# ------------------------
+# OS / System
+# ------------------------
 .DS_Store
 Thumbs.db
 
+# ------------------------
 # Node / Next.js
+# ------------------------
 node_modules/
 .next/
 out/
@@ -10,7 +14,9 @@ dist/
 .turbo/
 *.tsbuildinfo
 
+# ------------------------
 # Logs
+# ------------------------
 logs
 *.log
 npm-debug.log*
@@ -18,54 +24,80 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
+# ------------------------
 # Runtime data
+# ------------------------
 pids
 *.pid
 *.seed
 *.pid.lock
 
+# ------------------------
 # Coverage / reports
-coverage
-.nyc_output
-lib-cov
+# ------------------------
+coverage/
+.nyc_output/
+lib-cov/
 
+# ------------------------
 # Build artifacts
+# ------------------------
 build/
-build/Release
+build/Release/
 
+# ------------------------
 # Package manager caches
+# ------------------------
 .npm
-.pnpm-store
+.pnpm-store/
 .yarn/
 .yarn-integrity
 
+# ------------------------
 # Firebase
+# ------------------------
 .firebase/
 firebase-debug.log*
 firebase-debug.*.log*
 
-# Env files (keep example tracked)
+# ------------------------
+# Env files
+# ------------------------
 .env*
 !.env.example
 
-# Local tooling
+# ------------------------
+# Local tooling / misc
+# ------------------------
 .eslintcache
 .node_repl_history
 .grunt
-bower_components
+bower_components/
 .lock-wscript
 
-# Hosting / deploy tools
+# ------------------------
+# Hosting / Deploy
+# ------------------------
 .vercel/
 .netlify/
 
+# ------------------------
 # Editor / IDE
+# ------------------------
 .vscode/
 .idea/
 
-# Dataconnect generated files
-.dataconnect
+# ------------------------
+# Dataconnect
+# ------------------------
+.dataconnect/
 
-
+# ------------------------
 # Editor swap files
+# ------------------------
 *.swp
+
+# ------------------------
+# Solana binaries
+# ------------------------
+solana-release/
