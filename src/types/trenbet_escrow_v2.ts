@@ -1,0 +1,565 @@
+export type TrenbetEscrowV2 = {
+  "version": "0.1.0",
+  "name": "trenbet_escrow_v2",
+  "instructions": [
+    {
+      "name": "createMatch",
+      "accounts": [
+        {
+          "name": "player1",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player1Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "matchId",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "joinMatch",
+      "accounts": [
+        {
+          "name": "player2",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player2Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "submitResult",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player1Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player2Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "feeWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "winner",
+          "type": "publicKey"
+        },
+        {
+          "name": "feeBps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "resolveMatch",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player1Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player2Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "feeWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "winner",
+          "type": "publicKey"
+        },
+        {
+          "name": "feeBps",
+          "type": "u16"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "matchState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "player1",
+            "type": "publicKey"
+          },
+          {
+            "name": "player2",
+            "type": "publicKey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": "u8"
+          },
+          {
+            "name": "player1Vote",
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
+            "name": "player2Vote",
+            "type": {
+              "option": "publicKey"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MatchNotReady",
+      "msg": "Match not ready."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidWinner",
+      "msg": "Invalid winner."
+    }
+  ]
+};
+
+export const IDL: TrenbetEscrowV2 = {
+  "version": "0.1.0",
+  "name": "trenbet_escrow_v2",
+  "instructions": [
+    {
+      "name": "createMatch",
+      "accounts": [
+        {
+          "name": "player1",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player1Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "associatedTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "matchId",
+          "type": "u64"
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "joinMatch",
+      "accounts": [
+        {
+          "name": "player2",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player2Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "submitResult",
+      "accounts": [
+        {
+          "name": "signer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player1Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player2Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "feeWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "winner",
+          "type": "publicKey"
+        },
+        {
+          "name": "feeBps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "resolveMatch",
+      "accounts": [
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "matchState",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "player1",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player2",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player1Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "player2Token",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrowToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "feeWallet",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "winner",
+          "type": "publicKey"
+        },
+        {
+          "name": "feeBps",
+          "type": "u16"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "matchState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "player1",
+            "type": "publicKey"
+          },
+          {
+            "name": "player2",
+            "type": "publicKey"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": "u8"
+          },
+          {
+            "name": "player1Vote",
+            "type": {
+              "option": "publicKey"
+            }
+          },
+          {
+            "name": "player2Vote",
+            "type": {
+              "option": "publicKey"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "MatchNotReady",
+      "msg": "Match not ready."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidWinner",
+      "msg": "Invalid winner."
+    }
+  ]
+};

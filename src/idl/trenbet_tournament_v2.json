@@ -1,0 +1,176 @@
+{
+  "version": "0.1.0",
+  "name": "trenbet_tournament_v2",
+  "instructions": [
+    {
+      "name": "initTournament",
+      "accounts": [
+        {
+          "name": "organizer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "tournament",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "mint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "escrow",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "rent",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "entryFee",
+          "type": "u64"
+        },
+        {
+          "name": "maxPlayers",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "joinTournament",
+      "accounts": [
+        {
+          "name": "player",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "tournament",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "playerToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "escrow",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "payoutWinner",
+      "accounts": [
+        {
+          "name": "tournament",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "winner",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "escrow",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "winnerToken",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": []
+    }
+  ],
+  "accounts": [
+    {
+      "name": "TournamentAccount",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "organizer",
+            "type": "publicKey"
+          },
+          {
+            "name": "entryFee",
+            "type": "u64"
+          },
+          {
+            "name": "maxPlayers",
+            "type": "u8"
+          },
+          {
+            "name": "players",
+            "type": {
+              "vec": "publicKey"
+            }
+          },
+          {
+            "name": "prizePool",
+            "type": "u64"
+          },
+          {
+            "name": "state",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "NotOpen",
+      "msg": "Tournament not open for joining."
+    },
+    {
+      "code": 6001,
+      "name": "Full",
+      "msg": "Tournament is full."
+    },
+    {
+      "code": 6002,
+      "name": "NotStarted",
+      "msg": "Tournament not started."
+    },
+    {
+      "code": 6003,
+      "name": "NotAPlayer",
+      "msg": "Not a player in this tournament."
+    }
+  ]
+}
