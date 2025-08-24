@@ -1,13 +1,12 @@
 // components/SubmitResult.tsx
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth } from "../lib/firebase";
 import notify from "../lib/notify";
 import { fetchUserProfile } from "../lib/useUserProfile";
+import ProofUploader from "./ProofUploader";
 
 interface SubmitResultProps {
   matchId: string;
@@ -21,8 +20,10 @@ export default function SubmitResult({ matchId, match }: SubmitResultProps) {
   const [score, setScore] = useState("");
   const [team, setTeam] = useState("");
   const [gamertag, setGamertag] = useState(""); // optional but useful
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+
+  // proof image is now handled by ProofUploader; we just keep the URL
+  const [proofUrl, setProofUrl] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [user] = useAuthState(auth);
 
@@ -54,40 +55,32 @@ export default function SubmitResult({ matchId, match }: SubmitResultProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]);
 
-  // File preview
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const f = e.target.files[0];
-      setPhoto(f);
-      setPhotoUrl(URL.createObjectURL(f));
-    }
-  };
-
   // Submit handler
   const handleSubmit = async () => {
     if (step !== "won" && step !== "lost") return;
 
+    // Require proof when claiming a win
+    if (step === "won" && !proofUrl) {
+      notify("Proof Required", "Please add a result photo before submitting a win.", "error");
+      return;
+    }
+
+    if (!team || !score) {
+      notify("Missing Info", "Please enter your team and the final score.", "error");
+      return;
+    }
+
     setLoading(true);
-    let photoDownloadUrl: string | null = null;
 
     try {
-      // 1) Upload photo if provided (required for win)
-      if (step === "won" && photo) {
-        const storage = getStorage();
-        const fileRef = ref(storage, `proof/${matchId}/${user.uid}-${Date.now()}`);
-        await uploadBytes(fileRef, photo);
-        photoDownloadUrl = await getDownloadURL(fileRef);
-      }
-
-      // 2) Save result to Firestore
       const resultField = isCreator ? "creatorResult" : "joinerResult";
       const updateData: Record<string, any> = {};
       updateData[resultField] = {
-        result: step, // "won" or "lost"
+        result: step,              // "won" or "lost"
         team,
-        gamertag: gamertag || null, // helpful for audits
+        gamertag: gamertag || null,
         score,
-        proofUrl: photoDownloadUrl || null,
+        proofUrl: proofUrl || null,
         userId: user.uid,
         submittedAt: new Date().toISOString(),
       };
@@ -115,13 +108,19 @@ export default function SubmitResult({ matchId, match }: SubmitResultProps) {
         <div className="flex gap-4">
           <button
             className="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-xl text-lg"
-            onClick={() => setStep("won")}
+            onClick={() => {
+              setProofUrl(null); // reset previous proof if any
+              setStep("won");
+            }}
           >
             I Won
           </button>
           <button
             className="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-xl text-lg"
-            onClick={() => setStep("lost")}
+            onClick={() => {
+              setProofUrl(null);
+              setStep("lost");
+            }}
           >
             I Lost
           </button>
@@ -130,20 +129,34 @@ export default function SubmitResult({ matchId, match }: SubmitResultProps) {
     );
   }
 
-  // Step: details + (optional) photo
+  // Step: details (+ proof uploader when claiming win)
   if (step === "won" || step === "lost") {
     const needsPhoto = step === "won";
-    const canSubmit =
-      !loading &&
-      !!team &&
-      !!score &&
-      (needsPhoto ? !!photo : true);
+    const canSubmit = !loading && !!team && !!score && (!needsPhoto || !!proofUrl);
 
     return (
       <div className="bg-[#242441] mt-6 rounded-xl p-6 shadow-lg w-full flex flex-col items-center">
         <h2 className="font-bold text-yellow-400 text-lg mb-2">
           {step === "won" ? "Claim Your Win" : "Confirm Your Loss"}
         </h2>
+
+        {/* Proof uploader appears only for wins. On mobile it opens the camera immediately */}
+        {needsPhoto && (
+          <div className="w-full mb-4">
+            <ProofUploader
+              matchId={matchId}
+              userId={user.uid}
+              autoLaunchCamera={true}
+              onUploaded={(url) => {
+                setProofUrl(url);
+                notify("Photo Uploaded", "Your proof image is attached.", "success");
+              }}
+              onCancel={() => {
+                // optional: allow backing out of taking a photo
+              }}
+            />
+          </div>
+        )}
 
         {/* Gamertag (auto-filled; editable) */}
         <label className="block text-white mb-2 w-full max-w-md">
@@ -178,31 +191,6 @@ export default function SubmitResult({ matchId, match }: SubmitResultProps) {
           />
         </label>
 
-        {/* Photo only required when claiming win */}
-        {needsPhoto && (
-          <label className="block text-white mb-2 w-full max-w-md">
-            Upload Photo of Result:
-            <input
-              type="file"
-              accept="image/*"
-              onChange={handlePhotoChange}
-              className="ml-2"
-            />
-          </label>
-        )}
-
-        {photoUrl && (
-          <div className="my-3">
-            <Image
-              src={photoUrl}
-              alt="Proof"
-              width={320}
-              height={180}
-              className="rounded-xl"
-            />
-          </div>
-        )}
-
         <button
           onClick={handleSubmit}
           disabled={!canSubmit}
@@ -221,6 +209,7 @@ export default function SubmitResult({ matchId, match }: SubmitResultProps) {
     </div>
   );
 }
+
 
 
 
