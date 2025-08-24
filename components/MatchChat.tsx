@@ -1,5 +1,6 @@
+// components/MatchChat.tsx
 import { useEffect, useMemo, useRef, useState } from "react";
-import { db, auth } from "../lib/firebase";
+import { useAuthState } from "react-firebase-hooks/auth";
 import {
   collection,
   addDoc,
@@ -11,7 +12,9 @@ import {
   getDoc,
   setDoc,
 } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
+import { db, auth } from "../lib/firebase";
+import notify from "../lib/notify";
+import { fetchUserProfile } from "../lib/useUserProfile";
 
 interface MatchChatProps {
   matchId: string;
@@ -37,7 +40,7 @@ type PlayerCard = {
   updatedAt?: any;
   confirmed?: boolean;
   confirmedAt?: any;
-  selectionLocked?: boolean; // NEW
+  selectionLocked?: boolean;
 };
 
 export default function MatchChat({ matchId }: MatchChatProps) {
@@ -46,17 +49,17 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
   // --- chat state ---
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [text,   setText] = useState("");
-  const [username, setUsername] = useState<string>("Player");
+  const [text, setText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // --- match + players state ---
   const [match, setMatch] = useState<MatchDoc | null>(null);
-  const [me,    setMe]    = useState<PlayerCard>({});
-  const [opp,   setOpp]   = useState<PlayerCard>({});
+  const [me, setMe] = useState<PlayerCard>({});
+  const [opp, setOpp] = useState<PlayerCard>({});
   const [myTeam, setMyTeam] = useState("");
-  const [myTag,  setMyTag]  = useState("");
-  const [profileTag, setProfileTag] = useState(""); // from users/{uid}
+  const [myTag, setMyTag] = useState("");
+  const [profileTag, setProfileTag] = useState("");
+  const [username, setUsername] = useState<string>("Player");
   const [confirming, setConfirming] = useState(false);
 
   // autosave state
@@ -69,25 +72,29 @@ export default function MatchChat({ matchId }: MatchChatProps) {
   const opponentUid = useMemo(() => {
     if (!myUid || !match) return null;
     if (match.creatorUserId === myUid) return match.joinerUserId ?? null;
-    if (match.joinerUserId === myUid)  return match.creatorUserId ?? null;
+    if (match.joinerUserId === myUid) return match.creatorUserId ?? null;
     return null;
   }, [myUid, match]);
 
-  const locked = !!(me.selectionLocked ?? me.confirmed); // treat confirmed as locked too
+  const locked = !!(me.selectionLocked ?? me.confirmed);
 
-  // ✅ You can confirm if you have values and you're not locked
   const canConfirm = useMemo(() => {
     return !locked && Boolean(myTeam.trim() && myTag.trim());
   }, [locked, myTeam, myTag]);
 
   const bothConfirmed = Boolean(me.confirmed && opp.confirmed);
 
-  // (Info-only) Opp updated after my confirm — no reconfirm required anymore
   const oppChangedAfterMyConfirm = useMemo(() => {
     if (!me.confirmed || !me.confirmedAt || !opp.updatedAt) return false;
     try {
-      const myC  = me.confirmedAt.toMillis ? me.confirmedAt.toMillis() : new Date(me.confirmedAt).valueOf();
-      const oppU = opp.updatedAt.toMillis ? opp.updatedAt.toMillis() : new Date(opp.updatedAt).valueOf();
+      const myC =
+        typeof me.confirmedAt?.toMillis === "function"
+          ? me.confirmedAt.toMillis()
+          : new Date(me.confirmedAt).valueOf();
+      const oppU =
+        typeof opp.updatedAt?.toMillis === "function"
+          ? opp.updatedAt.toMillis()
+          : new Date(opp.updatedAt).valueOf();
       return oppU > myC;
     } catch {
       return false;
@@ -96,15 +103,17 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
   // ===== Username (sender label) =====
   useEffect(() => {
-    const fetchUsername = async () => {
-      if (!user) return;
-      const userRef = doc(db, "users", user.uid);
-      const snap = await getDoc(userRef);
-      const data: any = snap.exists() ? snap.data() : null;
-      if (data?.username) setUsername(data.username);
-    };
-    fetchUsername();
-  }, [user]);
+    (async () => {
+      try {
+        if (!user?.uid) return;
+        const snap = await getDoc(doc(db, "users", user.uid));
+        const d: any = snap.exists() ? snap.data() : null;
+        if (d?.username) setUsername(String(d.username));
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, [user?.uid]);
 
   // ===== Load match doc =====
   useEffect(() => {
@@ -124,31 +133,37 @@ export default function MatchChat({ matchId }: MatchChatProps) {
     const unsub = onSnapshot(ref, (snap) => {
       const data = (snap.data() as PlayerCard) || {};
       setMe(data);
-      if (data.team      !== undefined) setMyTeam(data.team || "");
-      if (data.gamertag  !== undefined) setMyTag(data.gamertag || "");
+      // hydrate inputs but don't fight user typing
+      if (data.team !== undefined && !locked) setMyTeam((cur) => cur || data.team || "");
+      if (data.gamertag !== undefined && !locked) setMyTag((cur) => cur || data.gamertag || "");
     });
     return () => unsub();
-  }, [myUid, matchId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myUid, matchId, locked]);
 
   // ===== Pull profile gamertag and prefill once if empty =====
   useEffect(() => {
-    if (!user) return;
-    const userRef = doc(db, "users", user.uid);
-    const unsub = onSnapshot(userRef, (snap) => {
-      const data: any = snap.exists() ? snap.data() : null;
-      const tag =
-        (data?.gamertag && String(data.gamertag).trim()) ||
-        (data?.linkedAccount && String(data.linkedAccount).trim()) ||
-        "";
-      setProfileTag(tag);
-
-      if (!prefilledOnceRef.current && !me.gamertag?.trim() && !myTag.trim() && tag) {
-        setMyTag(tag);
-        prefilledOnceRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        if (!user?.uid) return;
+        const prof = await fetchUserProfile(user.uid);
+        if (cancelled) return;
+        const tag = (prof.gamertag || "").trim();
+        setProfileTag(tag);
+        if (!prefilledOnceRef.current && !me.gamertag?.trim() && !myTag.trim() && tag) {
+          setMyTag(tag);
+          prefilledOnceRef.current = true;
+        }
+      } catch (e) {
+        console.error(e);
       }
-    });
-    return () => unsub();
-  }, [user, me.gamertag, myTag]);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.uid, me.gamertag, myTag]);
 
   // ===== Subscribe to opponent card =====
   useEffect(() => {
@@ -169,9 +184,7 @@ export default function MatchChat({ matchId }: MatchChatProps) {
     if (!matchId) return;
     const q = query(collection(db, "matchChats", matchId, "messages"), orderBy("createdAt"));
     const unsubscribe = onSnapshot(q, (snap) => {
-      setMessages(
-        snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as ChatMessage[]
-      );
+      setMessages(snap.docs.map((d) => ({ id: d.id, ...(d.data() as any) })) as ChatMessage[]);
     });
     return () => unsubscribe();
   }, [matchId]);
@@ -184,7 +197,7 @@ export default function MatchChat({ matchId }: MatchChatProps) {
   // ===== Auto-save (debounced) — NO edits after locked =====
   useEffect(() => {
     if (!myUid || !matchId) return;
-    if (locked) return; // 🚫 do nothing once locked
+    if (locked) return;
 
     const t = myTeam.trim();
     const g = myTag.trim();
@@ -195,18 +208,20 @@ export default function MatchChat({ matchId }: MatchChatProps) {
     debounceRef.current = setTimeout(async () => {
       try {
         setAutoSaving(true);
-
-        const payload: any = {
-          team: t,
-          gamertag: g,
-          updatedAt: serverTimestamp(),
-          // NOTE: no more auto-unconfirm logic — you’re not locked yet
-        };
-
         const ref = doc(db, "matches", matchId, "players", myUid);
-        await setDoc(ref, payload, { merge: true });
-
+        await setDoc(
+          ref,
+          {
+            team: t,
+            gamertag: g,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
         setLastSavedAt(Date.now());
+      } catch (e) {
+        console.error(e);
+        notify("Auto-save", "Could not save your team/gamertag.", "error");
       } finally {
         setAutoSaving(false);
       }
@@ -219,11 +234,15 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
   // ===== System message helper =====
   const postSystemMessage = async (msg: string) => {
-    await addDoc(collection(db, "matchChats", matchId, "messages"), {
-      text: msg,
-      sender: "[system]",
-      createdAt: serverTimestamp(),
-    });
+    try {
+      await addDoc(collection(db, "matchChats", matchId, "messages"), {
+        text: msg,
+        sender: "[system]",
+        createdAt: serverTimestamp(),
+      });
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   // ===== Actions =====
@@ -240,12 +259,16 @@ export default function MatchChat({ matchId }: MatchChatProps) {
           gamertag: myTag.trim(),
           updatedAt: serverTimestamp(),
           confirmed: true,
-          selectionLocked: true,       // 🔒 permanent
+          selectionLocked: true,
           confirmedAt: serverTimestamp(),
         },
         { merge: true }
       );
       await postSystemMessage(`${username} locked their team & gamertag.`);
+      notify("Locked In", "Your selection is locked. Waiting for opponent.", "success");
+    } catch (e: any) {
+      console.error(e);
+      notify("Confirm", e?.message || "Failed to confirm.", "error");
     } finally {
       setConfirming(false);
     }
@@ -255,6 +278,13 @@ export default function MatchChat({ matchId }: MatchChatProps) {
     await postSystemMessage(`${username} nudged opponent to add team & gamertag.`);
   };
 
+  // ===== Guard: only show to participants =====
+  if (!user) return null;
+  if (!match) return null;
+  const isCreator = myUid === match.creatorUserId;
+  const isJoiner = myUid === match.joinerUserId;
+  if (!isCreator && !isJoiner) return null;
+
   // ===== UI =====
   return (
     <div className="w-full h-full flex flex-col gap-3">
@@ -263,10 +293,18 @@ export default function MatchChat({ matchId }: MatchChatProps) {
         <div className="flex-1 overflow-y-auto p-4 bg-[#232344] rounded-t-lg" style={{ maxHeight: 350 }}>
           {messages.map((msg) => (
             <div key={msg.id} className="mb-2">
-              <span className={`font-bold ${msg.sender === "[system]" ? "text-gray-400" : "text-yellow-400"}`}>
+              <span
+                className={`font-bold ${
+                  msg.sender === "[system]" ? "text-gray-400" : "text-yellow-400"
+                }`}
+              >
                 {msg.sender}:
               </span>{" "}
-              <span className={`${msg.sender === "[system]" ? "text-gray-300 italic" : "text-white"}`}>
+              <span
+                className={`${
+                  msg.sender === "[system]" ? "text-gray-300 italic" : "text-white"
+                }`}
+              >
                 {msg.text}
               </span>
             </div>
@@ -274,15 +312,20 @@ export default function MatchChat({ matchId }: MatchChatProps) {
           <div ref={messagesEndRef} />
         </div>
         <form
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
-            if (!user || !text.trim()) return;
-            addDoc(collection(db, "matchChats", matchId, "messages"), {
-              text,
-              sender: username,
-              createdAt: serverTimestamp(),
-            });
-            setText("");
+            const content = text.trim();
+            if (!user || !content) return;
+            try {
+              await addDoc(collection(db, "matchChats", matchId, "messages"), {
+                text: content,
+                sender: username,
+                createdAt: serverTimestamp(),
+              });
+              setText("");
+            } catch (e) {
+              console.error(e);
+            }
           }}
           className="flex bg-[#1a1a2e] p-2 rounded-b-lg"
         >
@@ -303,13 +346,19 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
       {/* Pre-game cards */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {/* My card (editable until locked) */}
+        {/* My card */}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <h3 className="text-lg font-semibold text-white mb-1">Your Info</h3>
 
           {/* Autosave status */}
           <div className="text-xs text-gray-400 mb-3">
-            {locked ? "Locked — no further edits" : (autoSaving ? "Saving…" : lastSavedAt ? "Auto-saved" : "Auto-save ready")}
+            {locked
+              ? "Locked — no further edits"
+              : autoSaving
+              ? "Saving…"
+              : lastSavedAt
+              ? "Auto-saved"
+              : "Auto-save ready"}
           </div>
 
           <label className="block text-sm text-gray-300 mb-1">Team</label>
@@ -368,7 +417,6 @@ export default function MatchChat({ matchId }: MatchChatProps) {
                 type="button"
                 onClick={nudgeOpponent}
                 className="ml-auto bg-white/10 text-white px-3 py-2 rounded-xl hover:bg-white/20"
-                disabled={false}
               >
                 Nudge opponent
               </button>
@@ -377,12 +425,15 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
           {me.updatedAt && (
             <p className="text-xs text-gray-400 mt-2">
-              Last updated: {new Date(me.updatedAt.toMillis?.() ?? me.updatedAt).toLocaleString()}
+              Last updated:{" "}
+              {new Date(
+                typeof me.updatedAt?.toMillis === "function"
+                  ? me.updatedAt.toMillis()
+                  : (me.updatedAt as any)
+              ).toLocaleString()}
             </p>
           )}
-          {me.confirmed && (
-            <p className="text-xs text-green-300 mt-1">You’re locked in.</p>
-          )}
+          {me.confirmed && <p className="text-xs text-green-300 mt-1">You’re locked in.</p>}
           {oppChangedAfterMyConfirm && (
             <p className="text-xs text-amber-300 mt-1">
               Opponent updated their info after you locked — review before starting.
@@ -390,7 +441,7 @@ export default function MatchChat({ matchId }: MatchChatProps) {
           )}
         </div>
 
-        {/* Opponent card (read-only) */}
+        {/* Opponent card */}
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <h3 className="text-lg font-semibold text-white mb-3">Opponent Info</h3>
 
@@ -411,17 +462,20 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
             {opp.updatedAt && (
               <p className="text-xs text-gray-400">
-                Last updated: {new Date(opp.updatedAt.toMillis?.() ?? opp.updatedAt).toLocaleString()}
+                Last updated:{" "}
+                {new Date(
+                  typeof opp.updatedAt?.toMillis === "function"
+                    ? opp.updatedAt.toMillis()
+                    : (opp.updatedAt as any)
+                ).toLocaleString()}
               </p>
             )}
-            {opp.confirmed && (
-              <div className="text-xs text-green-300">Opponent is confirmed.</div>
-            )}
+            {opp.confirmed && <div className="text-xs text-green-300">Opponent is confirmed.</div>}
           </div>
         </div>
       </section>
 
-      {/* Both confirmed banner */}
+      {/* Both confirmed banners */}
       {bothConfirmed && !oppChangedAfterMyConfirm && (
         <div className="rounded-xl bg-green-600/20 border border-green-500/30 text-green-200 px-4 py-2">
           ✅ Both players confirmed. You’re good to start.
@@ -430,9 +484,10 @@ export default function MatchChat({ matchId }: MatchChatProps) {
 
       {oppChangedAfterMyConfirm && (
         <div className="rounded-xl bg-amber-600/20 border border-amber-500/30 text-amber-200 px-4 py-2">
-          ⚠️ Opponent changed info after you locked — just double-check details.
+          ⚠️ Opponent changed info after you locked — double-check details.
         </div>
       )}
     </div>
   );
 }
+
