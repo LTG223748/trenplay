@@ -14,7 +14,10 @@ const gameIcons = {
 
 export default function GameFilterBar({ activeGame, setActiveGame, categories }) {
   return (
-    <div className="flex justify-between bg-[#1a0033]/80 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-inner mb-6" style={{ minHeight: 153 }}>
+    <div
+      className="flex justify-between bg-[#1a0033]/80 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-inner mb-6"
+      style={{ minHeight: 153 }}
+    >
       {categories.map((game) => (
         <button
           key={game}
@@ -25,10 +28,10 @@ export default function GameFilterBar({ activeGame, setActiveGame, categories })
             rounded-[36px] border-2
             font-orbitron font-black uppercase tracking-widest
             text-base sm:text-lg
-            shadow-md transition-all duration-300
+            transition-all duration-300
             ${activeGame === game
-              ? "bg-white/60 text-black border-yellow-200 shadow-yellow-400/30 scale-105 z-10"
-              : "bg-white/20 border-[#6648b0] text-white hover:bg-white/30 hover:shadow-purple-500/20"
+              ? "bg-white/70 text-black border-yellow-200 scale-105 z-10 shadow-[0_0_20px_rgba(250,204,21,.55)]" // ✅ glowing active box
+              : "bg-white/20 border-[#6648b0] text-white hover:bg-white/30 hover:shadow-[0_0_14px_rgba(168,85,247,.35)]"
             }
             hover:scale-105
           `}

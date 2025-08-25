@@ -8,6 +8,7 @@ import { db } from '../lib/firebase';
 import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
+import RocketAcrossHeader from './RocketAcrossHeader'; // 🚀 import
 
 const STARTER_AVATARS = [
   '/avatars/Starter-1.png','/avatars/Starter-2.png','/avatars/Starter-3.png','/avatars/Starter-4.png',
@@ -59,9 +60,12 @@ const Header: React.FC<HeaderProps> = ({ user, tc, division }) => {
 
   return (
     <header
-      className="relative flex justify-between items-center px-6 bg-[#1a0030] text-white border-b border-[#3b2060]"
+      className="relative flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
+      {/* 🚀 Rocket animation overlay */}
+      <RocketAcrossHeader intervalMs={60_000} size={140} />
+
       {/* Subtle starfield */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {[...Array(20)].map((_, i) => (
@@ -80,22 +84,22 @@ const Header: React.FC<HeaderProps> = ({ user, tc, division }) => {
         ))}
       </div>
 
-      {/* Left: logo (fits inside the bar) */}
-      <div className="flex items-center h-full">
-        <div className="relative h-10 w-[160px]">
+      {/* Left: logo flush with sidebar */}
+      <div className="flex items-center h-full ml-0">
+        <Link href="/">
           <Image
-            src="/images/trenplay-logo.png"  // <-- your requested logo
-            alt="TrenPlay"
-            fill
-            className="object-contain"
+            src="/images/trenplay-logo.png"
+            alt="TrenPlay Logo"
+            width={180}
+            height={50}
+            className="block object-contain"
             priority
           />
-        </div>
+        </Link>
       </div>
 
       {/* Right: wallet + auth */}
       <div className="flex items-center gap-6 text-sm relative z-10 h-20">
-        {/* Wallet chip/button (auto shows Select Wallet / connected wallet) */}
         <WalletMultiButton className="!bg-[#6c4bd3] !text-white !rounded-lg !px-5 !py-2 !h-auto !min-h-0" />
 
         {!user ? (
@@ -158,5 +162,3 @@ const Header: React.FC<HeaderProps> = ({ user, tc, division }) => {
 };
 
 export default Header;
-
-

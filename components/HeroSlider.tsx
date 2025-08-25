@@ -146,7 +146,7 @@ export default function HeroSlider() {
 
           {/* Text + CTA */}
           <div className="relative z-20 p-8 flex flex-col justify-center h-full max-w-xl">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-yellow-300 drop-shadow-lg mb-2">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-yellow-300 mb-2 [text-shadow:0_0_16px_rgba(250,204,21,.7)]">
               {slide.headline}
             </h2>
             {slide.subline && (
@@ -157,7 +157,8 @@ export default function HeroSlider() {
             {slide.ctaHref && slide.ctaLabel && (
               <Link
                 href={slide.ctaHref}
-                className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-2 rounded-full shadow transition"
+                className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-2 rounded-full transition 
+                           shadow-[0_0_18px_rgba(250,204,21,.55)]"
               >
                 {slide.ctaLabel}
               </Link>
@@ -192,6 +193,3 @@ export default function HeroSlider() {
     </div>
   );
 }
-
-
-

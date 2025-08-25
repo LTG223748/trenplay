@@ -7,7 +7,7 @@ import HeroSlider from '../components/HeroSlider';
 import GameFilterBar from '../components/GameFilterBar';
 import MatchGrid from '../components/MatchGrid';
 import BottomContent from '../components/BottomContent';
-import DivisionFlanks from '../components/DivisionFlanks'; // ✅ new import
+import DivisionFlanks from '../components/DivisionFlanks';
 import Footer from '../components/Footer';
 
 import Link from 'next/link';
@@ -58,9 +58,37 @@ export default function HomePage() {
     loadMatches();
   }, []);
 
-  const filteredMatches = activeGame === 'All'
-    ? matches
-    : matches.filter((match: any) => match.game === activeGame);
+  // --- helpers for forgiving matching ---
+  const norm = (s: any) =>
+    (s ?? "")
+      .toString()
+      .trim()
+      .toLowerCase()
+      .replace(/[\s_-]/g, "");
+
+  const CATEGORY_ALIASES: Record<string, string[]> = {
+    nba2k: ["nba2k", "2k", "nba2k24", "nba2k25"],
+    fifa: ["fifa", "eafc", "fc24", "fc25", "ea"],
+    ufc: ["ufc"],
+    madden: ["madden", "nfl", "madden24", "madden25"],
+    collegefootball: ["collegefootball", "cfb", "ncaa", "ncaafootball"],
+    mlbtheshow: ["mlbtheshow", "mlb", "theshow", "mlb24", "mlb25"],
+  };
+
+  // --- filtered matches ---
+  const filteredMatches =
+    activeGame === "All"
+      ? matches
+      : matches.filter((m: any) => {
+          const gameField = m.game ?? m.title ?? ""; // adjust field name if needed
+          const g = norm(gameField);
+
+          const key = norm(activeGame); // e.g. "NBA 2K" -> "nba2k"
+          if (g === key) return true;
+
+          const aliases = CATEGORY_ALIASES[key] ?? [key];
+          return aliases.some((a) => g.includes(a));
+        });
 
   useEffect(() => {
     console.log('Auth state:', { user, loading, error });
@@ -69,11 +97,13 @@ export default function HomePage() {
   return (
     <>
       <HeroSlider />
+
       <GameFilterBar
         categories={categories}
         activeGame={activeGame}
         setActiveGame={setActiveGame}
       />
+
       <MatchGrid matches={filteredMatches} />
       <BottomContent />
 
@@ -82,7 +112,7 @@ export default function HomePage() {
 
       {/* SECURITY & FAIR PLAY */}
       <section className="mt-16 max-w-4xl mx-auto px-6 text-white">
-        <h2 className="text-3xl font-extrabold text-yellow-400 mb-8 text-center">
+        <h2 className="text-3xl font-extrabold text-yellow-400 mb-8 text-center [text-shadow:0_0_16px_rgba(250,204,21,.65)]">
           Security & Fair Play
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
@@ -138,7 +168,9 @@ export default function HomePage() {
 
       {/* FAQ SNEAK PEEK */}
       <section className="mt-20 max-w-4xl mx-auto px-6 text-white">
-        <h2 className="text-3xl font-extrabold text-yellow-400 mb-8 text-center">FAQ Sneak Peek</h2>
+        <h2 className="text-3xl font-extrabold text-yellow-400 mb-8 text-center [text-shadow:0_0_14px_rgba(250,204,21,.6)]">
+          FAQ Sneak Peek
+        </h2>
         <ul className="space-y-4 max-w-xl mx-auto">
           {[
             'How do I connect my crypto wallet?',
@@ -156,7 +188,7 @@ export default function HomePage() {
         <div className="text-center mt-6">
           <Link
             href="/faq"
-            className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3 rounded-full shadow transition"
+            className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3 rounded-full transition shadow-[0_0_18px_rgba(250,204,21,.55)]"
           >
             View Full FAQ
           </Link>
