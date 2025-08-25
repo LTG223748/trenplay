@@ -9,6 +9,10 @@ const NBA_IMG   = '/images/nba.png';
 const FIFA_IMG  = '/images/fifa.png';
 const COIN_IMG  = '/images/coin.png';
 
+// New tournament slide assets you added
+const MASCOT_TOURNEY_IMG = '/images/mascot-tournament.png';
+const RL_TOURNEY_IMG     = '/images/rocketleague-tournament.png';
+
 type LogoSlide = {
   kind: 'logo';
   alt: string;
@@ -17,6 +21,7 @@ type LogoSlide = {
   ctaHref?: string | null;
   ctaLabel?: string | null;
 };
+
 type PhotoSlide = {
   kind: 'photo';
   image: string;
@@ -25,7 +30,11 @@ type PhotoSlide = {
   subline?: string;
   ctaHref?: string | null;
   ctaLabel?: string | null;
+
+  /** Optional: foreground mascot overlay for extra punch */
+  foregroundMascot?: string | null;
 };
+
 type Slide = LogoSlide | PhotoSlide;
 
 const slides: Slide[] = [
@@ -54,6 +63,19 @@ const slides: Slide[] = [
     subline: 'Head-to-head wagers in seconds.',
     ctaHref: '/create-match',
     ctaLabel: 'Create Match',
+  },
+
+  // ⭐ New 4th slide: tournaments hype (Rocket League bg + mascot overlay)
+  {
+    kind: 'photo',
+    image: RL_TOURNEY_IMG,
+    alt: 'Tournaments',
+    headline: '🏆 Show Off Your Skill in Tournaments!',
+    subline:
+      'Multiple 4, 8, and 16-player brackets across every division. Win big — up to 15× your money in TrenCoin.',
+    ctaHref: '/tournaments',
+    ctaLabel: 'Enter a Tournament',
+    foregroundMascot: MASCOT_TOURNEY_IMG,
   },
 ];
 
@@ -88,12 +110,41 @@ export default function HeroSlider() {
           {slide.kind === 'photo' ? (
             <>
               <Image src={slide.image} alt={slide.alt} fill className="object-cover z-0" priority />
-              <div className="absolute inset-0 bg-black/40 z-10" />
+              {/* darken for legibility */}
+              <div className="absolute inset-0 bg-black/45 z-10" />
+
+              {/* Optional foreground mascot overlay for the tournament slide */}
+              {slide.foregroundMascot && (
+                <>
+                  {/* subtle spotlight glow behind mascot */}
+                  <div
+                    className="absolute right-8 bottom-0 z-20 pointer-events-none select-none"
+                    style={{
+                      width: '320px',
+                      height: '360px',
+                      borderRadius: '38% 38% 46% 46%',
+                      background:
+                        'radial-gradient(ellipse at center, #fff9c4aa 50%, #ffe06644 72%, transparent 100%)',
+                      filter: 'blur(16px)',
+                      opacity: 0.55,
+                    }}
+                  />
+                  <div className="absolute right-8 bottom-0 z-30 flex items-end justify-center w-[320px] h-[360px]">
+                    <Image
+                      src={slide.foregroundMascot}
+                      alt="Mascot"
+                      fill
+                      className="object-contain pointer-events-none select-none mascot-float mascot-glow"
+                      priority
+                    />
+                  </div>
+                </>
+              )}
             </>
           ) : (
             <div className="absolute inset-0 z-0">
               <div className="absolute inset-0 bg-gradient-to-r from-[#32104b] via-[#1a0030] to-[#32104b] opacity-95" />
-              {/* coins */}
+              {/* coins only for the logo slide */}
               {coinPos.map((p, idx) => (
                 <Image
                   key={idx}
@@ -119,17 +170,24 @@ export default function HeroSlider() {
               <div
                 className="absolute right-20 bottom-3 z-10 pointer-events-none select-none"
                 style={{
-                  width: '110px', height: '30px', borderRadius: '50%',
+                  width: '110px',
+                  height: '30px',
+                  borderRadius: '50%',
                   background: 'radial-gradient(ellipse at center, #000 55%, transparent 100%)',
-                  filter: 'blur(8px)', opacity: 0.3,
+                  filter: 'blur(8px)',
+                  opacity: 0.3,
                 }}
               />
               <div
                 className="absolute right-8 bottom-0 z-10 pointer-events-none select-none"
                 style={{
-                  width: '320px', height: '360px', borderRadius: '38% 38% 46% 46%',
-                  background: 'radial-gradient(ellipse at center, #fff9c4aa 50%, #ffe06644 72%, transparent 100%)',
-                  filter: 'blur(16px)', opacity: 0.6,
+                  width: '320px',
+                  height: '360px',
+                  borderRadius: '38% 38% 46% 46%',
+                  background:
+                    'radial-gradient(ellipse at center, #fff9c4aa 50%, #ffe06644 72%, transparent 100%)',
+                  filter: 'blur(16px)',
+                  opacity: 0.6,
                 }}
               />
               <div className="absolute right-8 bottom-0 z-20 flex items-end justify-center w-[320px] h-[360px]">
@@ -145,7 +203,7 @@ export default function HeroSlider() {
           )}
 
           {/* Text + CTA */}
-          <div className="relative z-20 p-8 flex flex-col justify-center h-full max-w-xl">
+          <div className="relative z-40 p-8 flex flex-col justify-center h-full max-w-xl">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-yellow-300 mb-2 [text-shadow:0_0_16px_rgba(250,204,21,.7)]">
               {slide.headline}
             </h2>
@@ -157,8 +215,7 @@ export default function HeroSlider() {
             {slide.ctaHref && slide.ctaLabel && (
               <Link
                 href={slide.ctaHref}
-                className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-2 rounded-full transition 
-                           shadow-[0_0_18px_rgba(250,204,21,.55)]"
+                className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-2 rounded-full transition shadow-[0_0_18px_rgba(250,204,21,.55)]"
               >
                 {slide.ctaLabel}
               </Link>
@@ -193,3 +250,4 @@ export default function HeroSlider() {
     </div>
   );
 }
+

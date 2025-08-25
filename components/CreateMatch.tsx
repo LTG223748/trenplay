@@ -49,7 +49,7 @@ const games = [
   'Madden 25', 'Madden 26',
   'College Football 25', 'College Football 26',
   'MLB The Show 25', 'MLB The Show 26',
-  'NHL 25', 'NHL 26',
+  'NHL 25', 'NHL 26', 'Rocket League', 'Fortnite 1v1'
 ];
 
 // === HARD WIRES (devnet) ===
