@@ -107,6 +107,7 @@ export default function TournamentsPage() {
 
   const greenTournaments = filtered.filter((t) => t.platform === 'Console-Green');
   const blueTournaments = filtered.filter((t) => t.platform === 'Console-Blue');
+  const nothingHere = greenTournaments.length === 0 && blueTournaments.length === 0;
 
   function renderTournaments(
     list: Tournament[],
@@ -130,7 +131,24 @@ export default function TournamentsPage() {
                 key={t.id}
                 className={`relative group bg-gradient-to-br from-[#1a0030] to-[#29004d] p-6 rounded-3xl shadow-xl border-2 ${cardBorder} overflow-hidden`}
               >
+                {/* soft gradient halo */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-[#4b0082] to-[#dcb0ff] opacity-20 blur-xl" />
+
+                {/* tiny coin sparkles */}
+                <div className="pointer-events-none absolute inset-0">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <span
+                      key={i}
+                      className="absolute block w-1 h-1 rounded-full bg-yellow-300/70 animate-sparkle"
+                      style={{
+                        top: `${5 + Math.random() * 85}%`,
+                        left: `${5 + Math.random() * 85}%`,
+                        animationDelay: `${(i * 177) % 1200}ms`,
+                      }}
+                    />
+                  ))}
+                </div>
+
                 <div className="relative z-10 space-y-4">
                   <div className="absolute top-4 right-4 flex items-center">
                     {getConsoleIcon(t.platform)}
@@ -162,7 +180,10 @@ export default function TournamentsPage() {
                   {/* Bracket preview */}
                   <BracketDisplay tournament={t} />
 
-                  <JoinTournamentButton tournament={t} />
+                  {/* Join button with subtle "casino pop" */}
+                  <div className="inline-block animate-[pop_1.8s_ease-in-out_infinite]">
+                    <JoinTournamentButton tournament={t} />
+                  </div>
                 </div>
               </div>
             );
@@ -174,7 +195,7 @@ export default function TournamentsPage() {
 
   return (
     <div className="min-h-screen bg-[#0c001a] px-6 py-10 font-[Orbitron] text-white">
-      {/* New grand-entrance divider */}
+      {/* Grand-entrance divider */}
       <TournamentHero division={currentDivision} />
 
       {/* Division title */}
@@ -190,23 +211,52 @@ export default function TournamentsPage() {
         </div>
       </div>
 
-      {/* Console sections */}
-      {renderTournaments(
-        greenTournaments,
-        <span className="text-green-400 text-2xl">🎮</span>,
-        'Console (Green)',
-        'border-green-500'
+      {/* Empty state or console sections */}
+      {nothingHere ? (
+        <div className="my-16 flex flex-col items-center justify-center text-center">
+          <div className="mb-4 text-5xl">😴</div>
+          <h3 className="text-2xl font-extrabold text-yellow-300 mb-2">
+            No tournaments available (yet)
+          </h3>
+          <p className="text-violet-200/80 max-w-md">
+            Check back soon, or start one to get the action rolling.
+          </p>
+        </div>
+      ) : (
+        <>
+          {renderTournaments(
+            greenTournaments,
+            <span className="text-green-400 text-2xl">🎮</span>,
+            'Console (Green)',
+            'border-green-500'
+          )}
+
+          {renderTournaments(
+            blueTournaments,
+            <span className="text-blue-400 text-2xl">🎮</span>,
+            'Console (Blue)',
+            'border-blue-500'
+          )}
+        </>
       )}
 
-      {renderTournaments(
-        blueTournaments,
-        <span className="text-blue-400 text-2xl">🎮</span>,
-        'Console (Blue)',
-        'border-blue-500'
-      )}
+      {/* local animations for pop & sparkle */}
+      <style jsx>{`
+        @keyframes pop {
+          0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250,204,21,0)); }
+          50% { transform: scale(1.03); filter: drop-shadow(0 0 10px rgba(250,204,21,.45)); }
+        }
+        @keyframes sparkle {
+          0% { opacity: 0; transform: translateY(0) scale(0.85); }
+          25% { opacity: 1; }
+          100% { opacity: 0; transform: translateY(-8px) scale(1.05); }
+        }
+        .animate-sparkle { animation: sparkle 2.4s ease-in-out infinite; }
+      `}</style>
     </div>
   );
 }
+
 
 
 
