@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "export": "next export"
   },
   "dependencies": {
     "@coral-xyz/anchor": "^0.29.0",
@@ -50,3 +51,4 @@
   "license": "ISC",
   "description": ""
 }
+

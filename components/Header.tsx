@@ -9,56 +9,90 @@ import { useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import '@solana/wallet-adapter-react-ui/styles.css';
 import RocketAcrossHeader from './RocketAcrossHeader';
+import { persistAvatarIfMissing, normalizeAvatar } from '../utils/avatar';
 
 const STARTER_AVATARS = [
   '/avatars/Starter-1.png','/avatars/Starter-2.png','/avatars/Starter-3.png','/avatars/Starter-4.png',
   '/avatars/Starter-5.png','/avatars/Starter-6.png','/avatars/Starter-7.png','/avatars/Starter-8.png',
   '/avatars/Starter-9.png','/avatars/Starter-10.png',
 ];
-const pickRandomAvatar = () =>
-  STARTER_AVATARS[Math.floor(Math.random() * STARTER_AVATARS.length)];
 
 interface HeaderProps {
   user?: any;
   tc?: number;
-  division?: string;
+  division?: string; // optional fallback
 }
 
 type Star = { top: string; left: string; delay: string; duration: string };
 
-const Header: React.FC<HeaderProps> = ({ user, division }) => {
+// Match your /utils/eloDivision.ts tiers
+const DIVISION_BOUNDS: Record<string, { min: number; max: number | null; next?: string; nextAt?: number }> = {
+  Rookie: { min: 0,   max: 700,  next: 'Pro',    nextAt: 700 },
+  Pro:    { min: 700, max: 900,  next: 'Elite',  nextAt: 900 },
+  Elite:  { min: 900, max: 1200, next: 'Legend', nextAt: 1200 },
+  Legend: { min: 1200, max: null },
+};
+
+const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
   const [mounted, setMounted] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(STARTER_AVATARS[0]);
+
+  // Display-only state pulled from Firestore
+  const [division, setDivision] = useState<string | null>(divisionProp ?? null);
+  const [elo, setElo] = useState<number | null>(null);
+
+  // Hover/tap popover for Division
+  const [showDivPopover, setShowDivPopover] = useState(false);
+
   const { disconnect } = useWallet();
 
-  // Ensure SSR/CSR match: render a simple shell on SSR; enable dynamic bits after mount
   useEffect(() => setMounted(true), []);
 
-  // Load profile only after mount (client-only)
+  // Load profile, sticky avatar, division & elo
   useEffect(() => {
     if (!mounted) return;
+
     const fetchProfile = async () => {
-      if (user?.uid) {
-        try {
-          const ref = doc(db, 'users', user.uid);
-          const snap = await getDoc(ref);
-          const data = snap.data() || {};
-          setUsername(data.username || user.email?.split('@')[0] || 'Player');
-          setAvatarUrl(data.avatar || pickRandomAvatar());
-        } catch {
-          setUsername(user?.email?.split('@')[0] || 'Player');
-          setAvatarUrl(pickRandomAvatar());
-        }
-      } else {
+      if (!user?.uid) {
         setUsername(null);
         setAvatarUrl(STARTER_AVATARS[0]);
+        setDivision(null);
+        setElo(null);
+        return;
+      }
+
+      try {
+        const ref = doc(db, 'users', user.uid);
+        const snap = await getDoc(ref);
+        const data = snap.data() || {};
+
+        setUsername(data.username || user.email?.split('@')[0] || 'Player');
+
+        // Sticky avatar: use saved if present, else persist a deterministic default once
+        const saved = normalizeAvatar(data.avatar);
+        if (saved) {
+          setAvatarUrl(saved);
+        } else {
+          const ensured = await persistAvatarIfMissing(user.uid);
+          setAvatarUrl(ensured);
+        }
+
+        // Division + Elo (your schema uses 'elo')
+        setDivision((typeof data.division === 'string' && data.division) || divisionProp || null);
+        setElo(typeof data.elo === 'number' && Number.isFinite(data.elo) ? data.elo : null);
+      } catch {
+        setUsername(user?.email?.split('@')[0] || 'Player');
+        setAvatarUrl(STARTER_AVATARS[0]);
+        setDivision(divisionProp ?? null);
+        setElo(null);
       }
     };
-    fetchProfile();
-  }, [mounted, user]);
 
-  // Generate star positions *after* mount so SSR doesn't randomize
+    fetchProfile();
+  }, [mounted, user, divisionProp]);
+
+  // Client-only starfield (avoid SSR randomness)
   const stars: Star[] = useMemo(() => {
     if (!mounted) return [];
     const arr: Star[] = [];
@@ -73,12 +107,29 @@ const Header: React.FC<HeaderProps> = ({ user, division }) => {
     return arr;
   }, [mounted]);
 
+  // Progress bar math for the popover
+  const { pct, minLabel, maxLabel, nextLabel } = useMemo(() => {
+    const div = (division ?? 'Rookie') as keyof typeof DIVISION_BOUNDS;
+    const bounds = DIVISION_BOUNDS[div] || DIVISION_BOUNDS.Rookie;
+    const min = bounds.min;
+    const max = bounds.max ?? Math.max(min + 200, (elo ?? min) + 100); // Legend has no cap
+    const current = Math.max(min, Math.min(max, elo ?? min));
+    const percent = Math.max(0, Math.min(100, ((current - min) / (max - min)) * 100));
+    return {
+      pct: Number.isFinite(percent) ? percent : 0,
+      minLabel: min,
+      maxLabel: bounds.max === null ? '∞' : max,
+      nextLabel: bounds.next && bounds.nextAt ? `Next: ${bounds.next} @ ${bounds.nextAt}` : 'Max tier',
+    };
+  }, [division, elo]);
+
+  // ---------- SSR shell to avoid hydration mismatch ----------
   const headerShell = (
     <header
-      className="relative flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
+      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-visible"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
-      {/* Left: logo flush with sidebar */}
+      {/* Left: logo (unchanged position/size) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -92,27 +143,25 @@ const Header: React.FC<HeaderProps> = ({ user, division }) => {
         </Link>
       </div>
 
-      {/* Right: keep a stable placeholder on SSR */}
+      {/* Right placeholder keeps layout stable during SSR */}
       <div className="flex items-center gap-6 text-sm relative z-10 h-20" aria-hidden>
-        <div className="w-36 h-8 rounded-lg bg-white/10" />
+        <div className="w-56 h-8 rounded-lg bg-white/10" />
       </div>
     </header>
   );
 
-  if (!mounted) {
-    // SSR and the very first client render show the same shell → no hydration mismatch
-    return headerShell;
-  }
+  if (!mounted) return headerShell;
 
+  // ---------- Real header ----------
   return (
     <header
-      className="relative flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
+      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-visible"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
-      {/* 🚀 Rocket animation overlay (client-only) */}
+      {/* Rocket overlay (pointer-events disabled by default in its impl) */}
       <RocketAcrossHeader intervalMs={60_000} size={140} />
 
-      {/* Starfield (generated after mount; no SSR randomness) */}
+      {/* Starfield (no pointer capture) */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {stars.map((s, i) => (
           <span
@@ -130,7 +179,7 @@ const Header: React.FC<HeaderProps> = ({ user, division }) => {
         ))}
       </div>
 
-      {/* Left: logo */}
+      {/* Left: logo (exactly as before) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -144,7 +193,7 @@ const Header: React.FC<HeaderProps> = ({ user, division }) => {
         </Link>
       </div>
 
-      {/* Right: wallet + auth (client-only) */}
+      {/* Right cluster: wallet + auth */}
       <div className="flex items-center gap-6 text-sm relative z-10 h-20">
         <WalletMultiButton className="!bg-[#6c4bd3] !text-white !rounded-lg !px-5 !py-2 !h-auto !min-h-0" />
 
@@ -165,20 +214,83 @@ const Header: React.FC<HeaderProps> = ({ user, division }) => {
           </div>
         ) : (
           <div className="flex items-center gap-3 bg-gradient-to-br from-[#200041] via-[#2e005f] to-[#431078] px-5 py-2 rounded-xl shadow-lg border border-yellow-400">
-            <span className="text-yellow-300 bg-[#2d0140] px-3 py-1 rounded-lg text-lg font-bold border border-yellow-500 shadow">
-              🥇 {division || 'Rookie'}
-            </span>
+            {/* Division pill with hover/tap popover */}
+            <div
+              className="relative z-[1000]"
+              onMouseEnter={() => setShowDivPopover(true)}
+              onMouseLeave={() => setShowDivPopover(false)}
+            >
+              <button
+                type="button"
+                className="text-yellow-300 bg-[#2d0140] px-3 py-1 rounded-lg text-lg font-bold border border-yellow-500 shadow"
+                onClick={() => setShowDivPopover(v => !v)} // mobile toggle
+                aria-haspopup="dialog"
+                aria-expanded={showDivPopover}
+                aria-label="Division & Elo"
+              >
+                🥇 {division || 'Rookie'}
+              </button>
+
+              {/* Progress popover */}
+              {showDivPopover && (
+                <div
+                  role="dialog"
+                  className="absolute top-full mt-3 right-0 w-80 rounded-xl border border-purple-700 bg-[#1b0933] shadow-2xl p-4 z-[999]"
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg">🏅</span>
+                      <span className="text-yellow-300 font-semibold">
+                        {division || 'Rookie'}
+                      </span>
+                    </div>
+                    <div className="text-sm text-purple-200">
+                      Elo <span className="font-semibold text-white">{elo ?? '—'}</span>
+                    </div>
+                  </div>
+
+                  {elo != null ? (
+                    division === 'Legend' ? (
+                      <div className="text-purple-200 text-sm">
+                        Legend — <span className="text-purple-100">Max tier</span>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="w-full h-3 rounded-full bg-purple-900/50 overflow-hidden">
+                          <div
+                            className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-purple-400 transition-[width] duration-700"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                        <div className="mt-2 flex items-center justify-between text-xs text-purple-300">
+                          <span>{minLabel}</span>
+                          <span className="text-purple-100">{nextLabel}</span>
+                          <span>{maxLabel}</span>
+                        </div>
+                      </>
+                    )
+                  ) : (
+                    <div className="text-purple-300 text-sm">Elo unavailable</div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Username */}
             <span className="text-white font-semibold bg-[#3c1867] px-3 py-1 rounded-lg shadow border border-purple-600 text-base">
               {username || 'Player'}
             </span>
+
+            {/* Avatar (sticky; never random on refresh) */}
             <Link href="/profile">
-              {/* use <Image> if these are in /public for perf; <img> is fine too */}
               <img
                 src={avatarUrl}
                 alt="Profile"
                 className="w-10 h-10 rounded-full border-2 border-yellow-400 shadow hover:border-purple-400 cursor-pointer transition"
               />
             </Link>
+
+            {/* Logout */}
             <button
               onClick={async () => {
                 try {
@@ -212,3 +324,7 @@ const Header: React.FC<HeaderProps> = ({ user, division }) => {
 };
 
 export default Header;
+
+
+
+
