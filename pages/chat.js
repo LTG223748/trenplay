@@ -8,7 +8,8 @@ import {
   query,
   orderBy
 } from 'firebase/firestore';
-import { auth, db } from '../../../lib/firebase';
+import { db } from '@/lib/firebase';
+
 
 export default function MatchChat() {
   const router = useRouter();

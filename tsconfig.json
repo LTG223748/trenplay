@@ -36,7 +36,8 @@
     "target",
     "**/tests/**",
     "**/*.spec.ts",
-    "**/*.test.ts"
+    "**/*.test.ts",
+    "**/_archived/**"
   ]
 }
 
