@@ -9,9 +9,9 @@ const NBA_IMG   = '/images/nba.png';
 const FIFA_IMG  = '/images/fifa.png';
 const COIN_IMG  = '/images/coin.png';
 
-// New tournament slide assets you added
+// Tournament slide assets
 const MASCOT_TOURNEY_IMG = '/images/mascot-tournament.png';
-const RL_TOURNEY_IMG     = '/images/rocketleague-tournament.png';
+const RL_TOURNEY_IMG     = '/images/rocket-league.png'; // new 1920×1080 version
 
 type LogoSlide = {
   kind: 'logo';
@@ -30,9 +30,8 @@ type PhotoSlide = {
   subline?: string;
   ctaHref?: string | null;
   ctaLabel?: string | null;
-
-  /** Optional: foreground mascot overlay for extra punch */
   foregroundMascot?: string | null;
+  mascotOffsetY?: number;
 };
 
 type Slide = LogoSlide | PhotoSlide;
@@ -64,8 +63,6 @@ const slides: Slide[] = [
     ctaHref: '/create-match',
     ctaLabel: 'Create Match',
   },
-
-  // ⭐ New 4th slide: tournaments hype (Rocket League bg + mascot overlay)
   {
     kind: 'photo',
     image: RL_TOURNEY_IMG,
@@ -76,6 +73,7 @@ const slides: Slide[] = [
     ctaHref: '/tournaments',
     ctaLabel: 'Enter a Tournament',
     foregroundMascot: MASCOT_TOURNEY_IMG,
+    mascotOffsetY: 16,
   },
 ];
 
@@ -93,7 +91,6 @@ export default function HeroSlider() {
   const [current, setCurrent] = useState(0);
   const coinAnim = useMemo(() => coinPos.map(() => (Math.random() * 2).toFixed(2)), []);
 
-  // autoplay every 5s
   useEffect(() => {
     const id = setInterval(() => setCurrent((i) => (i + 1) % slides.length), 5000);
     return () => clearInterval(id);
@@ -106,17 +103,30 @@ export default function HeroSlider() {
       <div className="rounded-xl overflow-hidden mb-8 shadow-lg ring-[3px] ring-purple-500/50 animate-glow">
         <div className="relative w-full h-72 sm:h-80 lg:h-96">
 
-          {/* Background per slide */}
           {slide.kind === 'photo' ? (
             <>
-              <Image src={slide.image} alt={slide.alt} fill className="object-cover z-0" priority />
-              {/* darken for legibility */}
+              <Image
+                src={(slide as PhotoSlide).image}
+                alt={slide.alt}
+                fill
+                priority
+                className="object-cover z-0"
+              />
               <div className="absolute inset-0 bg-black/45 z-10" />
 
-              {/* Optional foreground mascot overlay for the tournament slide */}
-              {slide.foregroundMascot && (
+              {(slide as PhotoSlide).foregroundMascot && (
                 <>
-                  {/* subtle spotlight glow behind mascot */}
+                  <div
+                    className="absolute right-20 bottom-3 z-10 pointer-events-none select-none"
+                    style={{
+                      width: '110px',
+                      height: '30px',
+                      borderRadius: '50%',
+                      background: 'radial-gradient(ellipse at center, #000 55%, transparent 100%)',
+                      filter: 'blur(8px)',
+                      opacity: 0.3,
+                    }}
+                  />
                   <div
                     className="absolute right-8 bottom-0 z-20 pointer-events-none select-none"
                     style={{
@@ -129,13 +139,17 @@ export default function HeroSlider() {
                       opacity: 0.55,
                     }}
                   />
-                  <div className="absolute right-8 bottom-0 z-30 flex items-end justify-center w-[320px] h-[360px]">
+                  <div className="absolute right-8 bottom-0 z-30 flex items-end justify-center w-[320px] h-[360px] overflow-hidden">
                     <Image
-                      src={slide.foregroundMascot}
+                      src={(slide as PhotoSlide).foregroundMascot!}
                       alt="Mascot"
                       fill
-                      className="object-contain pointer-events-none select-none mascot-float mascot-glow"
+                      className="object-contain object-bottom pointer-events-none select-none mascot-float mascot-glow"
                       priority
+                      style={{
+                        transform: `translateY(${(slide as PhotoSlide).mascotOffsetY ?? 0}px)`,
+                        willChange: 'transform',
+                      }}
                     />
                   </div>
                 </>
@@ -144,7 +158,6 @@ export default function HeroSlider() {
           ) : (
             <div className="absolute inset-0 z-0">
               <div className="absolute inset-0 bg-gradient-to-r from-[#32104b] via-[#1a0030] to-[#32104b] opacity-95" />
-              {/* coins only for the logo slide */}
               {coinPos.map((p, idx) => (
                 <Image
                   key={idx}
@@ -166,7 +179,6 @@ export default function HeroSlider() {
                   priority={idx < 4}
                 />
               ))}
-              {/* glow + logo */}
               <div
                 className="absolute right-20 bottom-3 z-10 pointer-events-none select-none"
                 style={{
@@ -190,19 +202,19 @@ export default function HeroSlider() {
                   opacity: 0.6,
                 }}
               />
-              <div className="absolute right-8 bottom-0 z-20 flex items-end justify-center w-[320px] h-[360px]">
+              <div className="absolute right-8 bottom-0 z-20 flex items-end justify-center w-[320px] h-[360px] overflow-hidden">
                 <Image
                   src={HERO_LOGO}
                   alt={slide.alt}
                   fill
-                  className="object-contain pointer-events-none select-none mascot-float mascot-glow"
+                  className="object-contain object-bottom pointer-events-none select-none mascot-float mascot-glow"
                   priority
+                  style={{ transform: 'translateY(0px)' }}
                 />
               </div>
             </div>
           )}
 
-          {/* Text + CTA */}
           <div className="relative z-40 p-8 flex flex-col justify-center h-full max-w-xl">
             <h2 className="text-3xl sm:text-4xl font-extrabold text-yellow-300 mb-2 [text-shadow:0_0_16px_rgba(250,204,21,.7)]">
               {slide.headline}
@@ -250,4 +262,3 @@ export default function HeroSlider() {
     </div>
   );
 }
-
