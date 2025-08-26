@@ -102,11 +102,10 @@ export default function Footer() {
           <h3 className="text-yellow-400 font-bold mb-3">🌐 TrenPlay Inc</h3>
           <p>Built for gamers by gamers. Powered by Tren Coins.</p>
           <p className="text-xs mt-2 text-gray-500">
-            © {new Date().getFullYear()} TrenPlay Inc. All rights reserved.
+            © {new Date().getUTCFullYear()} TrenPlay Inc. All rights reserved.
           </p>
         </div>
       </div>
     </footer>
   );
 }
-

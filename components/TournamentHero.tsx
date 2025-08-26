@@ -68,7 +68,7 @@ export default function TournamentHero({
         </div>
 
         {/* Foreground mascot on coin pile (right side) */}
-        <div className="absolute right-3 sm:right-6 bottom-0 z-20 w-[200px] sm:w-[260px] lg:w-[300px]">
+        <div className="absolute right-3 sm:right-6 -bottom-16 z-20 w-[180px] sm:w-[240px] lg:w-[280px]">
           {/* Spotlight glow behind mascot */}
           <div
             className="absolute -top-6 right-0 w-[140%] h-[140%] blur-2xl opacity-50"
@@ -107,12 +107,25 @@ export default function TournamentHero({
             </Link>
           </div>
 
-          {/* Division chips preview */}
-          <div className="mt-3 flex items-center gap-2 text-xs text-violet-100/80">
-            <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5">Rookie</span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5">Pro</span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5">Elite</span>
-            <span className="rounded-full border border-white/20 bg-white/10 px-2 py-0.5">Legend</span>
+          {/* Division chips preview (highlight current division) */}
+          <div className="mt-3 flex items-center gap-2 text-xs">
+            {(["Rookie","Pro","Elite","Legend"] as const).map((d) => {
+              const isActive = d === division;
+              return (
+                <span
+                  key={d}
+                  aria-current={isActive ? "true" : undefined}
+                  className={[
+                    "rounded-full px-2 py-0.5 border transition",
+                    isActive
+                      ? "bg-yellow-400 text-black border-yellow-300 shadow-[0_0_14px_rgba(250,204,21,.45)]"
+                      : "bg-white/10 text-violet-100/80 border-white/20"
+                  ].join(" ")}
+                >
+                  {d}
+                </span>
+              );
+            })}
           </div>
         </div>
 

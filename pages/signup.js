@@ -2,7 +2,6 @@ import { useState } from 'react';
 import {
   createUserWithEmailAndPassword,
   updateProfile,
-  sendEmailVerification,
 } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
@@ -91,13 +90,12 @@ export default function SignupPage() {
         subscriptionExpires: null,
       });
 
-      // 🔐 Send email verification
-      await sendEmailVerification(user);
+      setSuccess('Account created! Redirecting…');
 
-      // 🚫 Log them out right away
-      await auth.signOut();
-
-      setSuccess('Verification email sent! Please confirm your email before logging in.');
+      // ✅ Redirect after short delay
+      setTimeout(() => {
+        router.push('/'); // 👈 change this to "/dashboard" if you prefer
+      }, 1500);
     } catch (err) {
       setError(err.message || 'Signup failed. Please try again.');
     }

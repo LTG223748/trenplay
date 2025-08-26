@@ -11,7 +11,7 @@ const COIN_IMG  = '/images/coin.png';
 
 // Tournament slide assets
 const MASCOT_TOURNEY_IMG = '/images/mascot-tournament.png';
-const RL_TOURNEY_IMG     = '/images/rocket-league.png'; // new 1920×1080 version
+const RL_TOURNEY_IMG     = '/images/rocketleague-tournament.png'; // new 1920×1080 version
 
 type LogoSlide = {
   kind: 'logo';

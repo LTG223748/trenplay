@@ -1,37 +1,50 @@
-import { useEffect, useState } from 'react';
+// pages/index.tsx
+import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { auth, db } from '../lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 
-import HeroSlider from '../components/HeroSlider';
-import GameFilterBar from '../components/GameFilterBar';
-import MatchGrid from '../components/MatchGrid';
 import BottomContent from '../components/BottomContent';
-import DivisionFlanks from '../components/DivisionFlanks';
 import Footer from '../components/Footer';
 
 import Link from 'next/link';
 import { FaQuestionCircle } from 'react-icons/fa';
 import notify from '../lib/notify';
 
+// ---- Types aligned with GameFilterBar ----
+import type { TrenGameId } from '../lib/games';
+type GameKey = TrenGameId | 'all';
+
+// Client-only components (likely use browser APIs/animations/measurements)
+const HeroSlider = dynamic(() => import('../components/HeroSlider'), { ssr: false });
+const DivisionFlanks = dynamic(() => import('../components/DivisionFlanks'), { ssr: false });
+const MatchGrid = dynamic(() => import('../components/MatchGrid'), { ssr: false });
+const GameFilterBar = dynamic(() => import('../components/GameFilterBar'), { ssr: false });
+
 export default function HomePage() {
   const [user, loading, error] = useAuthState(auth);
+
+  // Gate client-only rendering to prevent SSR/CSR mismatch
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
   const [tc, setTc] = useState(0);
   const [division, setDivision] = useState('');
-  const [matches, setMatches] = useState([]);
-  const [activeGame, setActiveGame] = useState('All');
+  const [matches, setMatches] = useState<any[]>([]);
 
-  const categories = [
-    'All', 'NBA 2K', 'FIFA', 'UFC', 'Madden', 'College Football', 'MLB The Show'
-  ];
+  // Use GameFilterBar keys (e.g., 'all', 'nba2k', 'fifa', 'cfb', etc.)
+  const [activeGame, setActiveGame] = useState<GameKey>('all');
 
+  // Load profile (client-only)
   useEffect(() => {
+    if (!mounted) return;
     if (!user) {
       setTc(0);
       setDivision('');
       return;
     }
-    const loadUserProfile = async () => {
+    (async () => {
       try {
         const ref = doc(db, 'users', user.uid);
         const snap = await getDoc(ref);
@@ -39,56 +52,59 @@ export default function HomePage() {
         setTc(data?.tc || 0);
         setDivision(data?.division || 'Unranked');
         if (data?.referralBonusJustReceived) {
-          notify("🎉 Referral Bonus!", "You and your friend just earned 1,000 TC each!", "success");
+          notify('🎉 Referral Bonus!', 'You and your friend just earned 1,000 TC each!', 'success');
           await updateDoc(ref, { referralBonusJustReceived: false });
         }
       } catch (err) {
         console.log('Error loading profile:', err);
       }
-    };
-    loadUserProfile();
-  }, [user]);
+    })();
+  }, [mounted, user]);
 
+  // Load matches (client-only)
   useEffect(() => {
-    const loadMatches = async () => {
+    if (!mounted) return;
+    (async () => {
       const snap = await getDocs(collection(db, 'matches'));
-      const allMatches = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const allMatches = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
       setMatches(allMatches);
-    };
-    loadMatches();
-  }, []);
+    })();
+  }, [mounted]);
 
-  // --- helpers for forgiving matching ---
+  // Helpers
   const norm = (s: any) =>
-    (s ?? "")
+    (s ?? '')
       .toString()
       .trim()
       .toLowerCase()
-      .replace(/[\s_-]/g, "");
+      .replace(/[\s_-]/g, '');
 
+  // Aliases keyed by our GameFilterBar keys
   const CATEGORY_ALIASES: Record<string, string[]> = {
-    nba2k: ["nba2k", "2k", "nba2k24", "nba2k25"],
-    fifa: ["fifa", "eafc", "fc24", "fc25", "ea"],
-    ufc: ["ufc"],
-    madden: ["madden", "nfl", "madden24", "madden25"],
-    collegefootball: ["collegefootball", "cfb", "ncaa", "ncaafootball"],
-    mlbtheshow: ["mlbtheshow", "mlb", "theshow", "mlb24", "mlb25"],
+    nba2k: ['nba2k', '2k', 'nba2k24', 'nba2k25'],
+    fifa: ['fifa', 'eafc', 'fc24', 'fc25', 'ea'],
+    ufc: ['ufc'],
+    madden: ['madden', 'nfl', 'madden24', 'madden25'],
+    cfb: ['collegefootball', 'cfb', 'ncaa', 'ncaafootball'],
+    mlb: ['mlbtheshow', 'mlb', 'theshow', 'mlb24', 'mlb25'],
+    nhl: ['nhl', 'hockey'],
+    fortnite_build: ['fortnite', 'fortnitebuild', 'fn', 'build'],
+    rocket_league: ['rocketleague', 'rl', 'rocket', 'carball'],
   };
 
-  // --- filtered matches ---
-  const filteredMatches =
-    activeGame === "All"
-      ? matches
-      : matches.filter((m: any) => {
-          const gameField = m.game ?? m.title ?? ""; // adjust field name if needed
-          const g = norm(gameField);
+  const filteredMatches = useMemo(() => {
+    if (activeGame === 'all') return matches;
 
-          const key = norm(activeGame); // e.g. "NBA 2K" -> "nba2k"
-          if (g === key) return true;
+    return matches.filter((m: any) => {
+      const gameField = m.game ?? m.title ?? '';
+      const g = norm(gameField);
+      const key = norm(activeGame); // e.g. 'nba2k', 'fifa', 'cfb', etc.
 
-          const aliases = CATEGORY_ALIASES[key] ?? [key];
-          return aliases.some((a) => g.includes(a));
-        });
+      if (g === key) return true;
+      const aliases = CATEGORY_ALIASES[key] ?? [key];
+      return aliases.some((a) => g.includes(a));
+    });
+  }, [matches, activeGame]);
 
   useEffect(() => {
     console.log('Auth state:', { user, loading, error });
@@ -96,19 +112,19 @@ export default function HomePage() {
 
   return (
     <>
-      <HeroSlider />
+      {/* Client-only animated components */}
+      {mounted ? <HeroSlider /> : <div style={{ height: 280 }} />}
 
+      {/* Use NEW props: selectedGameKey + onChange */}
       <GameFilterBar
-        categories={categories}
-        activeGame={activeGame}
-        setActiveGame={setActiveGame}
+        selectedGameKey={activeGame}
+        onChange={(key) => setActiveGame(key as GameKey)}
       />
 
-      <MatchGrid matches={filteredMatches} />
+      {mounted ? <MatchGrid matches={filteredMatches} /> : <div className="min-h-[200px]" />}
       <BottomContent />
 
-      {/* Division Flanks */}
-      <DivisionFlanks />
+      {mounted ? <DivisionFlanks /> : null}
 
       {/* SECURITY & FAIR PLAY */}
       <section className="mt-16 max-w-4xl mx-auto px-6 text-white">
@@ -118,7 +134,7 @@ export default function HomePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
           <div>
             <svg width="60" height="60" viewBox="0 0 64 64" className="mx-auto mb-4">
-              <path fill="#FACC15" d="M32 4l22 8v14c0 15.4-9.5 25.9-22 34-12.5-8.1-22-18.6-22-34V12l22-8z" />
+              <path fill="#FACC15" d="M32 4l22 8v14c0 15.4 9.5 25.9 22 34-12.5-8.1-22-18.6-22-34V12l22-8z" />
               <path fill="#00000022" d="M32 4v52c12.5-8.1 22-18.6 22-34V12l-22-8z"/>
             </svg>
             <h3 className="font-semibold mb-2">Anti-Cheat Measures</h3>
@@ -172,14 +188,8 @@ export default function HomePage() {
           FAQ Sneak Peek
         </h2>
         <ul className="space-y-4 max-w-xl mx-auto">
-          {[
-            'How do I connect my crypto wallet?',
-            'What are Tren Coins used for?',
-            'Is TrenPlay fair and skill-based?',
-            'How do I start competing?',
-            'How do divisions work?'
-          ].map((q, idx) => (
-            <li key={idx} className="flex items-center gap-3">
+          {['How do I connect my crypto wallet?','What are Tren Coins used for?','Is TrenPlay fair and skill-based?','How do I start competing?','How do divisions work?'].map((q) => (
+            <li key={q} className="flex items-center gap-3">
               <FaQuestionCircle className="text-yellow-400 text-2xl flex-shrink-0" />
               <span>{q}</span>
             </li>
