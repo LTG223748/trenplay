@@ -10,11 +10,8 @@ import { TrenGameId } from '../lib/games';
 
 type Match = {
   id: string;
-  // NEW (preferred): structured game id
-  gameId?: TrenGameId;
-  // BACK-COMPAT: old title/label field
-  game?: string;
-
+  gameId?: TrenGameId;   // structured id (preferred)
+  game?: string;         // legacy label
   platform: string;
   entryFee: number;
   status: string;
@@ -35,13 +32,12 @@ export default function Matches() {
   type GameKey = TrenGameId | 'all';
   const [selectedGameKey, setSelectedGameKey] = useState<GameKey>('all');
 
-  // PLATFORM FILTER (your existing buttons)
+  // PLATFORM FILTER — removed "All"
   const PLATFORM_OPTIONS = [
-    { label: 'All', value: 'All' },
     { label: 'Console (Green)', value: 'Console-Green' },
-    { label: 'Console (Blue)', value: 'Console-Blue' },
+    { label: 'Console (Blue)',  value: 'Console-Blue' },
   ];
-  const [selectedPlatform, setSelectedPlatform] = useState('All');
+  const [selectedPlatform, setSelectedPlatform] = useState('Console-Green');
 
   // Load user's division
   useEffect(() => {
@@ -81,14 +77,10 @@ export default function Matches() {
     return <div className="text-white p-10">Loading...</div>;
   }
 
-  // Filter by platform first (keeps your behavior)
-  const platformFiltered =
-    selectedPlatform === 'All'
-      ? matches
-      : matches.filter((m) => m.platform === selectedPlatform);
+  // Filter by platform first (no "All" branch anymore)
+  const platformFiltered = matches.filter((m) => m.platform === selectedPlatform);
 
-  // Then filter by game tab (MatchGrid still does its own filter too,
-  // but doing it here keeps the list small before rendering)
+  // Then filter by game tab
   const gameFiltered =
     selectedGameKey === 'all'
       ? platformFiltered
@@ -110,31 +102,34 @@ export default function Matches() {
           </button>
         </div>
 
-        {/* NEW: Game tabs (NHL, Fortnite, Rocket League, etc.) */}
+        {/* Game tabs */}
         <GameFilterBar
           selectedGameKey={selectedGameKey}
           onChange={setSelectedGameKey}
         />
 
-        {/* Platform tabs (your existing UI) */}
+        {/* Platform selector (now just Green / Blue) */}
         <div className="flex gap-3 mb-6">
-          {PLATFORM_OPTIONS.map((p) => (
-            <button
-              key={p.value}
-              className={`px-4 py-2 rounded-lg font-bold border-2 transition ${
-                selectedPlatform === p.value
-                  ? p.value === 'Console-Green'
-                    ? 'bg-green-400 text-black border-green-400'
-                    : p.value === 'Console-Blue'
-                    ? 'bg-blue-400 text-black border-blue-400'
-                    : 'bg-yellow-400 text-black border-yellow-400'
-                  : 'bg-[#1a1a2e] text-white border-[#292947] hover:bg-yellow-700 hover:text-white'
-              }`}
-              onClick={() => setSelectedPlatform(p.value)}
-            >
-              {p.label}
-            </button>
-          ))}
+          {PLATFORM_OPTIONS.map((p) => {
+            const isActive = selectedPlatform === p.value;
+            const activeCls =
+              p.value === 'Console-Green'
+                ? 'bg-green-400 text-black border-green-400'
+                : 'bg-blue-400 text-black border-blue-400';
+            return (
+              <button
+                key={p.value}
+                className={`px-4 py-2 rounded-lg font-bold border-2 transition ${
+                  isActive
+                    ? activeCls
+                    : 'bg-[#1a1a2e] text-white border-[#292947] hover:bg-[#242446]'
+                }`}
+                onClick={() => setSelectedPlatform(p.value)}
+              >
+                {p.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Match Grid */}
@@ -163,8 +158,5 @@ export default function Matches() {
     </div>
   );
 }
-
-
-
 
 

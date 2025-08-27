@@ -134,16 +134,21 @@ export default function TournamentsPage() {
                 {/* soft gradient halo */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-[#4b0082] to-[#dcb0ff] opacity-20 blur-xl" />
 
-                {/* tiny coin sparkles */}
+                {/* tiny coin sparkles (global keyframe so they always animate) */}
                 <div className="pointer-events-none absolute inset-0">
-                  {Array.from({ length: 10 }).map((_, i) => (
+                  {Array.from({ length: 14 }).map((_, i) => (
                     <span
                       key={i}
-                      className="absolute block w-1 h-1 rounded-full bg-yellow-300/70 animate-sparkle"
+                      className="tp-sparkle absolute block rounded-full bg-yellow-300"
                       style={{
+                        width: Math.random() < 0.25 ? 3 : 2,   // subtle variance
+                        height: Math.random() < 0.25 ? 3 : 2,
                         top: `${5 + Math.random() * 85}%`,
                         left: `${5 + Math.random() * 85}%`,
-                        animationDelay: `${(i * 177) % 1200}ms`,
+                        animationDelay: `${(i * 137) % 1800}ms`,
+                        animationDuration: `${2200 + ((i * 97) % 1200)}ms`,
+                        opacity: 0.85,
+                        willChange: 'opacity, transform',
                       }}
                     />
                   ))}
@@ -240,27 +245,23 @@ export default function TournamentsPage() {
         </>
       )}
 
-      {/* local animations for pop & sparkle */}
-      <style jsx>{`
+      {/* pop + GLOBAL sparkle keyframes/class (so the dots always animate) */}
+      <style jsx global>{`
         @keyframes pop {
           0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250,204,21,0)); }
           50% { transform: scale(1.03); filter: drop-shadow(0 0 10px rgba(250,204,21,.45)); }
         }
-        @keyframes sparkle {
-          0% { opacity: 0; transform: translateY(0) scale(0.85); }
-          25% { opacity: 1; }
-          100% { opacity: 0; transform: translateY(-8px) scale(1.05); }
+        @keyframes tpTwinkle {
+          0%, 100% { opacity: 0.75; transform: scale(1); }
+          50%      { opacity: 0;    transform: scale(0.55); }
         }
-        .animate-sparkle { animation: sparkle 2.4s ease-in-out infinite; }
+        .tp-sparkle {
+          animation: tpTwinkle 2.8s ease-in-out infinite;
+        }
       `}</style>
     </div>
   );
 }
-
-
-
-
-
 
 
 

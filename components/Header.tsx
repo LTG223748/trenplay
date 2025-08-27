@@ -126,10 +126,10 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
   // ---------- SSR shell to avoid hydration mismatch ----------
   const headerShell = (
     <header
-      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-visible"
+      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
-      {/* Left: logo (unchanged position/size) */}
+      {/* Left: logo (unchanged size; cropped by header if it overflows) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -155,7 +155,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
   // ---------- Real header ----------
   return (
     <header
-      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-visible"
+      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
       {/* Rocket overlay (pointer-events disabled by default in its impl) */}
@@ -179,7 +179,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
         ))}
       </div>
 
-      {/* Left: logo (exactly as before) */}
+      {/* Left: logo (unchanged size; cropped by header if it overflows) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -324,7 +324,3 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
 };
 
 export default Header;
-
-
-
-
