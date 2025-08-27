@@ -18,17 +18,17 @@ interface TournamentHeroProps {
 }
 
 const DIVISION_ACCENTS: Record<Division, { ring: string; glowFrom: string; glowTo: string }> = {
-  Rookie: { ring: "ring-gray-400/40", glowFrom: "#cbd5e1", glowTo: "#94a3b8" }, // silver
-  Pro:    { ring: "ring-sky-400/40",  glowFrom: "#38bdf8", glowTo: "#0ea5e9" }, // neon blue
-  Elite:  { ring: "ring-violet-500/40", glowFrom: "#a78bfa", glowTo: "#8b5cf6" }, // royal purple
+  Rookie: { ring: "ring-gray-400/40",  glowFrom: "#cbd5e1", glowTo: "#94a3b8" }, // silver
+  Pro:    { ring: "ring-sky-400/40",   glowFrom: "#38bdf8", glowTo: "#0ea5e9" }, // neon blue
+  Elite:  { ring: "ring-violet-500/40",glowFrom: "#a78bfa", glowTo: "#8b5cf6" }, // royal purple
   Legend: { ring: "ring-amber-400/50", glowFrom: "#fbbf24", glowTo: "#f59e0b" }, // gold
 };
 
 export default function TournamentHero({
   title = "Welcome to the Arena — TrenPlay Tournaments",
   subtitle = "Compete in 4, 8, and 16-player brackets across every division. Win big — up to 15× your money in TrenCoin.",
-  ctaHref = "/tournaments",
-  ctaLabel = "Browse Tournaments",
+  ctaHref = "/tournaments/how-it-works",
+  ctaLabel = "Learn how tournaments work",
   division = "Elite",
   backgroundSrc = "/images/arena-tournament.png",
   mascotSrc = "/images/mascotarena-tournament.png",
@@ -57,7 +57,7 @@ export default function TournamentHero({
           className="pointer-events-none absolute inset-0 opacity-60"
           style={{
             background:
-              `radial-gradient(120% 80% at 80% 70%, ${accent.glowFrom}22 0%, transparent 60%), 
+              `radial-gradient(120% 80% at 80% 70%, ${accent.glowFrom}22 0%, transparent 60%),
                radial-gradient(120% 80% at 20% 30%, ${accent.glowTo}22 0%, transparent 60%)`,
           }}
         />
@@ -89,7 +89,7 @@ export default function TournamentHero({
           </div>
         </div>
 
-        {/* Copy + CTA */}
+        {/* Copy + CTAs */}
         <div className="relative z-30 h-full max-w-3xl px-5 sm:px-8 lg:px-10 py-6 flex flex-col justify-center">
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-yellow-300 [text-shadow:0_0_18px_rgba(250,204,21,.55)]">
             {title}
@@ -98,12 +98,19 @@ export default function TournamentHero({
             {subtitle}
           </p>
 
-          <div className="mt-4">
+          <div className="mt-4 flex items-center gap-4">
             <Link
               href={ctaHref}
               className="inline-flex items-center gap-2 rounded-full bg-yellow-400 px-5 py-2 font-bold text-black shadow-[0_0_18px_rgba(250,204,21,.45)] hover:bg-yellow-300 hover:shadow-[0_0_24px_rgba(250,204,21,.65)] transition"
             >
-              {ctaLabel} <span aria-hidden>→</span>
+              ❓ {ctaLabel}
+            </Link>
+
+            <Link
+              href="/tournaments/how-it-works#fees"
+              className="text-sm text-gray-200/90 underline-offset-4 hover:underline"
+            >
+              Fees & payouts explained
             </Link>
           </div>
 
@@ -129,7 +136,7 @@ export default function TournamentHero({
           </div>
         </div>
 
-        {/* Subtle coin sparkles (very light) */}
+        {/* Subtle coin sparkles */}
         <div className="pointer-events-none absolute inset-0">
           {Array.from({ length: 12 }).map((_, i) => (
             <span
@@ -150,25 +157,20 @@ export default function TournamentHero({
           0% { background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%); transform: translateX(-100%); }
           100% { background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.12) 50%, transparent 100%); transform: translateX(100%); }
         }
-        .animate-sweep {
-          animation: sweep 5s linear infinite;
-        }
-        @keyframes bob {
-          0% { transform: translateY(0); }
-          100% { transform: translateY(-10px); }
-        }
-        .animate-bob {
-          animation: bob 2.4s ease-in-out infinite alternate;
-        }
+        .animate-sweep { animation: sweep 5s linear infinite; }
+
+        @keyframes bob { 0% { transform: translateY(0); } 100% { transform: translateY(-10px); } }
+        .animate-bob { animation: bob 2.4s ease-in-out infinite alternate; }
+
         @keyframes sparkle {
           0% { opacity: 0; transform: translateY(0) scale(0.8); }
           25% { opacity: 1; }
           100% { opacity: 0; transform: translateY(-10px) scale(1.05); }
         }
-        .animate-sparkle {
-          animation: sparkle 2.6s ease-in-out infinite;
-        }
+        .animate-sparkle { animation: sparkle 2.6s ease-in-out infinite; }
       `}</style>
     </section>
   );
 }
+
+

@@ -1,10 +1,11 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ['@coral-xyz/anchor'],
-  output: 'export',              // ✅ ensures static HTML build in /out
+  transpilePackages: ["@coral-xyz/anchor"],
   images: {
-    unoptimized: true            // ✅ required for next export (no Image Optimization server)
-  }
+    // You can keep this if you want to disable Next's built-in image optimization
+    // (useful if you're deploying to a platform without the Image Optimization server)
+    unoptimized: true,
+  },
 };
 
 export default nextConfig;
