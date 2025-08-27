@@ -1,29 +1,35 @@
-// pages/leaderboard.js
-import { useEffect, useState } from 'react';
-import { collection, getDocs, query, orderBy, limit, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+// pages/leaderboard.tsx
+import { useEffect, useState } from "react";
+import { collection, getDocs, query, orderBy, limit, addDoc, serverTimestamp } from "firebase/firestore";
+import { db, auth } from "../lib/firebase";
+import { User } from "firebase/auth";
 
-const TROPHIES = [
-  "🥇", // 1st
-  "🥈", // 2nd
-  "🥉", // 3rd
-];
+const TROPHIES = ["🥇", "🥈", "🥉"];
+
+interface UserData {
+  id: string;
+  email?: string;
+  username?: string;
+  wins?: number;
+  division?: string;
+  avatarUrl?: string;
+  online?: boolean;
+}
 
 export default function Leaderboard() {
-  const [users, setUsers] = useState([]);
-  const currentUser = auth.currentUser;
+  const [users, setUsers] = useState<UserData[]>([]);
+  const currentUser: User | null = auth.currentUser;
 
   useEffect(() => {
     const fetchUsers = async () => {
-      const usersRef = collection(db, 'users');
-      // Order by wins descending
-      const q = query(usersRef, orderBy('wins', 'desc'), limit(20));
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, orderBy("wins", "desc"), limit(100));
       const snap = await getDocs(q);
 
-      const list = snap.docs.map(doc => ({
+      const list: UserData[] = snap.docs.map((doc) => ({
         id: doc.id,
-        ...doc.data()
-      }));
+        ...doc.data(),
+      })) as UserData[];
 
       setUsers(list);
     };
@@ -31,20 +37,20 @@ export default function Leaderboard() {
     fetchUsers();
   }, []);
 
-  const handleChallenge = async (opponentEmail) => {
+  const handleChallenge = async (opponentEmail: string) => {
     const user = auth.currentUser;
     if (!user) return alert("You must be logged in.");
     if (user.email === opponentEmail) return alert("You can't challenge yourself.");
     const wagerAmount = 5;
 
     try {
-      await addDoc(collection(db, 'matches'), {
+      await addDoc(collection(db, "matches"), {
         creator: user.email,
         opponent: opponentEmail,
-        status: 'pending',
+        status: "pending",
         wager: wagerAmount,
-        game: 'TBD',
-        platform: 'TBD',
+        game: "TBD",
+        platform: "TBD",
         createdAt: serverTimestamp(),
       });
       alert(`Challenge sent to ${opponentEmail}!`);
@@ -56,15 +62,15 @@ export default function Leaderboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#12001a] via-[#2d0140] to-[#0a0815] text-white px-4 py-10 flex flex-col items-center relative overflow-hidden">
-      {/* Sparkle Overlay copied from Header */}
+      {/* Sparkle Overlay */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
         {[...Array(20)].map((_, i) => (
           <span
             key={i}
             className="absolute bg-white rounded-full opacity-70 animate-sparkle"
             style={{
-              width: '3px',
-              height: '3px',
+              width: "3px",
+              height: "3px",
               top: `${Math.random() * 100}%`,
               left: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 5}s`,
@@ -101,35 +107,49 @@ export default function Leaderboard() {
               </tr>
             ) : (
               users.map((user, index) => {
-                const isMe = currentUser && (user.id === currentUser.uid || user.email === currentUser.email);
+                const isMe =
+                  currentUser &&
+                  (user.id === currentUser.uid || user.email === currentUser.email);
                 const division = user.division || "Rookie";
                 const avatarUrl =
                   user.avatarUrl ||
-                  `https://api.dicebear.com/7.x/pixel-art/svg?seed=${encodeURIComponent(user.username || user.email || user.id)}`;
+                  `/avatars/Starter-${(index % 10) + 1}.png`; // fallback starter set
 
                 return (
                   <tr
                     key={user.id}
-                    className={`transition ${isMe ? "border-4 border-yellow-300 bg-[#292147]" : "hover:bg-[#23103d]"}`}
+                    className={`transition ${
+                      isMe
+                        ? "border-4 border-yellow-300 bg-[#292147]"
+                        : "hover:bg-[#23103d]"
+                    }`}
                   >
                     {/* Rank & Trophy */}
                     <td className="px-4 py-4 text-2xl font-bold">
-                      {TROPHIES[index] || <span className="text-yellow-200">{index + 1}</span>}
+                      {TROPHIES[index] || (
+                        <span className="text-yellow-200">{index + 1}</span>
+                      )}
                     </td>
                     {/* Player */}
                     <td className="px-4 py-4 flex items-center gap-3 font-semibold">
                       <img
                         src={avatarUrl}
-                        alt={user.username || user.email}
+                        alt={user.username || user.email || "Player"}
                         className="w-10 h-10 rounded-full border-2 border-yellow-400 shadow"
                       />
                       <span>
-                        <span className="text-white text-lg font-bold">{user.username || "Unknown"}</span>
+                        <span className="text-white text-lg font-bold">
+                          {user.username || "Unknown"}
+                        </span>
                         {user.online && (
-                          <span className="ml-2 text-green-400 text-sm font-bold">🟢 Live</span>
+                          <span className="ml-2 text-green-400 text-sm font-bold">
+                            🟢 Live
+                          </span>
                         )}
                         {isMe && (
-                          <span className="ml-2 px-2 py-1 rounded bg-yellow-400 text-purple-900 text-xs font-bold">You</span>
+                          <span className="ml-2 px-2 py-1 rounded bg-yellow-400 text-purple-900 text-xs font-bold">
+                            You
+                          </span>
                         )}
                       </span>
                     </td>
@@ -138,13 +158,16 @@ export default function Leaderboard() {
                       <span
                         className={`px-3 py-1 rounded-lg font-bold shadow text-base
                           ${
-                            division === "Rookie" ? "bg-[#303369] text-blue-300 border border-blue-500"
-                            : division === "Pro" ? "bg-[#45308a] text-purple-300 border border-purple-500"
-                            : division === "Elite" ? "bg-[#3d423a] text-green-300 border border-green-500"
-                            : division === "Legend" ? "bg-[#c8a200] text-black border border-yellow-400"
-                            : "bg-[#35313c] text-gray-200"
-                          }
-                        `}
+                            division === "Rookie"
+                              ? "bg-[#303369] text-blue-300 border border-blue-500"
+                              : division === "Pro"
+                              ? "bg-[#45308a] text-purple-300 border border-purple-500"
+                              : division === "Elite"
+                              ? "bg-[#3d423a] text-green-300 border border-green-500"
+                              : division === "Legend"
+                              ? "bg-[#c8a200] text-black border border-yellow-400"
+                              : "bg-[#35313c] text-gray-200"
+                          }`}
                       >
                         {division}
                       </span>
@@ -155,15 +178,13 @@ export default function Leaderboard() {
                     </td>
                     {/* Challenge */}
                     <td className="px-4 py-4 text-center">
-                      {isMe ? null : (
-                        user.online && (
-                          <button
-                            onClick={() => handleChallenge(user.email)}
-                            className="bg-gradient-to-tr from-purple-500 via-yellow-400 to-pink-500 text-black px-4 py-2 rounded-lg font-bold shadow-lg hover:scale-105 transition transform hover:brightness-110"
-                          >
-                            Challenge
-                          </button>
-                        )
+                      {!isMe && user.online && (
+                        <button
+                          onClick={() => handleChallenge(user.email!)}
+                          className="bg-gradient-to-tr from-purple-500 via-yellow-400 to-pink-500 text-black px-4 py-2 rounded-lg font-bold shadow-lg hover:scale-105 transition transform hover:brightness-110"
+                        >
+                          Challenge
+                        </button>
                       )}
                     </td>
                   </tr>
@@ -173,10 +194,12 @@ export default function Leaderboard() {
           </tbody>
         </table>
       </div>
+
       <div className="text-sm text-center text-gray-400 mt-10 max-w-lg z-10">
         Leaderboard based on <b>most wins</b>. Only the best can make the top!
       </div>
-      {/* Sparkle Animation Styles */}
+
+      {/* Sparkle Animation */}
       <style jsx>{`
         @keyframes sparkle {
           0%, 100% {
@@ -197,4 +220,5 @@ export default function Leaderboard() {
     </div>
   );
 }
+
 
