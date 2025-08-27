@@ -1,5 +1,6 @@
 // pages/matches.tsx
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/router';
 import { db, auth } from '../lib/firebase';
 import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
@@ -10,8 +11,8 @@ import { TrenGameId } from '../lib/games';
 
 type Match = {
   id: string;
-  gameId?: TrenGameId;   // structured id (preferred)
-  game?: string;         // legacy label
+  gameId?: TrenGameId;
+  game?: string;
   platform: string;
   entryFee: number;
   status: string;
@@ -21,25 +22,22 @@ type Match = {
   [key: string]: any;
 };
 
-export default function Matches() {
+function Matches() {
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [userDivision, setUserDivision] = useState<string | null>(null);
   const [user, userLoading] = useAuthState(auth);
   const router = useRouter();
 
-  // GAME FILTER (tabs above)
   type GameKey = TrenGameId | 'all';
   const [selectedGameKey, setSelectedGameKey] = useState<GameKey>('all');
 
-  // PLATFORM FILTER — removed "All"
   const PLATFORM_OPTIONS = [
     { label: 'Console (Green)', value: 'Console-Green' },
     { label: 'Console (Blue)',  value: 'Console-Blue' },
   ];
   const [selectedPlatform, setSelectedPlatform] = useState('Console-Green');
 
-  // Load user's division
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -49,7 +47,6 @@ export default function Matches() {
     })();
   }, [user]);
 
-  // Load matches for that division
   useEffect(() => {
     if (!userDivision) return;
     (async () => {
@@ -77,10 +74,8 @@ export default function Matches() {
     return <div className="text-white p-10">Loading...</div>;
   }
 
-  // Filter by platform first (no "All" branch anymore)
   const platformFiltered = matches.filter((m) => m.platform === selectedPlatform);
 
-  // Then filter by game tab
   const gameFiltered =
     selectedGameKey === 'all'
       ? platformFiltered
@@ -94,11 +89,34 @@ export default function Matches() {
           <h1 className="text-3xl font-extrabold text-yellow-300 drop-shadow-xl tracking-wide">
             🎮 Live Matches
           </h1>
+
+          {/* 🔥 TrenPlay-themed Create Match button */}
           <button
             onClick={() => router.push('/create-match')}
-            className="bg-purple-600 hover:bg-purple-700 text-white font-bold px-4 py-2 rounded shadow-md transition"
+            className="
+              group relative inline-flex items-center gap-2
+              rounded-full px-7 py-3
+              font-extrabold tracking-wide
+              text-white
+              bg-gradient-to-r from-fuchsia-500 via-purple-600 to-cyan-500
+              shadow-[0_0_20px_rgba(139,92,246,0.5)]
+              transition
+              hover:scale-105 hover:shadow-[0_0_32px_rgba(6,182,212,0.75)]
+              focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:ring-offset-2 focus:ring-offset-[#0d0d1f]
+            "
           >
-            ➕ Create Match
+            <span className="text-2xl leading-none font-bold">+</span>
+            Create Match
+
+            {/* optional shimmer */}
+            <span
+              className="
+                pointer-events-none absolute inset-0 rounded-full
+                opacity-0 group-hover:opacity-100 transition-opacity
+                bg-gradient-to-r from-transparent via-white/20 to-transparent
+              "
+              style={{ maskImage: 'linear-gradient(90deg, transparent, black, transparent)' }}
+            />
           </button>
         </div>
 
@@ -108,7 +126,7 @@ export default function Matches() {
           onChange={setSelectedGameKey}
         />
 
-        {/* Platform selector (now just Green / Blue) */}
+        {/* Platform selector */}
         <div className="flex gap-3 mb-6">
           {PLATFORM_OPTIONS.map((p) => {
             const isActive = selectedPlatform === p.value;
@@ -159,4 +177,4 @@ export default function Matches() {
   );
 }
 
-
+export default dynamic(() => Promise.resolve(Matches), { ssr: false });

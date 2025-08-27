@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
@@ -57,7 +57,7 @@ const HARDCODED_PLAYER1_ATA = new PublicKey('CRFQewYNA3DVyFqEEH1kUtyiZhEi2RTtC8e
 
 function CreateMatchPage() {
   const { publicKey, connected } = useWallet();
-  const anchorWallet = useAnchorWallet(); // Anchor-friendly wallet
+  const anchorWallet = useAnchorWallet();
   const [user] = useAuthState(auth);
 
   const [userDivision, setUserDivision] = useState<string>('Rookie');
@@ -69,6 +69,19 @@ function CreateMatchPage() {
 
   const connection = new Connection(RPC_URL, 'confirmed');
   const mint = new PublicKey(TREN_MINT);
+
+  // ✨ generate sparkle points once
+  const sparklePoints = useMemo(
+    () =>
+      Array.from({ length: 40 }).map((_, i) => ({
+        top: `${Math.random() * 100}%`,
+        left: `${Math.random() * 100}%`,
+        delay: `${(i * 137) % 2000}ms`,
+        duration: `${2400 + ((i * 97) % 1400)}ms`,
+        size: Math.random() < 0.3 ? 3 : 2,
+      })),
+    []
+  );
 
   useEffect(() => {
     if (!user) return;
@@ -101,15 +114,9 @@ function CreateMatchPage() {
     setLoading(true);
 
     try {
-      // Build program with the Anchor-friendly wallet
       const program = getTrenbetProgram(connection, anchorWallet);
-      console.log('Program ID (frontend):', program.programId.toBase58());
-
-      // a) unique id for this match (u64)
       const matchId = new anchor.BN(Date.now().toString());
-      console.log('MATCH ID   :', matchId.toString());
 
-      // b) match_state PDA (seeds = ["match_v3", player1, mint, matchId])
       const matchState = deriveMatchStatePda({
         programId: program.programId,
         player1: publicKey,
@@ -117,13 +124,11 @@ function CreateMatchPage() {
         matchId,
       });
 
-      // c) escrow_authority PDA (seeds = ["escrow_auth_v1", match_state])
       const escrowAuthority = deriveEscrowAuthorityPda({
         programId: program.programId,
         matchState,
       });
 
-      // d) escrow_token ATA for PDA (allowOwnerOffCurve = true)
       const escrowToken = await getAssociatedTokenAddress(
         mint,
         escrowAuthority,
@@ -132,13 +137,12 @@ function CreateMatchPage() {
         ASSOCIATED_TOKEN_PROGRAM_ID
       );
 
-      // Ensure escrow ATA exists; create if missing
       const ataInfo = await connection.getAccountInfo(escrowToken);
       if (!ataInfo) {
         const ix = createAssociatedTokenAccountInstruction(
-          publicKey,        // payer
-          escrowToken,      // ATA to create
-          escrowAuthority,  // owner (PDA)
+          publicKey,
+          escrowToken,
+          escrowAuthority,
           mint,
           TOKEN_PROGRAM_ID,
           ASSOCIATED_TOKEN_PROGRAM_ID
@@ -146,18 +150,13 @@ function CreateMatchPage() {
         const tx = new Transaction().add(ix);
         const provider = program.provider as AnchorProvider;
         await provider.sendAndConfirm(tx, []);
-        console.log('✅ Created escrow ATA for PDA:', escrowToken.toBase58());
       }
 
-      // Player1 token (hardcoded for now)
       const player1Token = HARDCODED_PLAYER1_ATA;
-
-      // amount -> u64 base units (decimals = 9)
       const decimals = 9;
       const rawAmount = Math.round(entryFee * Math.pow(10, decimals));
       const amountBn = new anchor.BN(rawAmount);
 
-      // create_match(match_id, amount)
       await program.methods
         .createMatch(matchId, amountBn)
         .accounts({
@@ -195,8 +194,6 @@ function CreateMatchPage() {
       });
 
       notify('✅ Match created on-chain and saved!', 'success');
-
-      // Router-free navigation (works everywhere)
       setTimeout(() => {
         if (typeof window !== 'undefined') window.location.assign('/matches');
       }, 500);
@@ -211,16 +208,39 @@ function CreateMatchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0d0d1f] text-white flex flex-col items-center justify-center px-4">
-      <h1 className="text-3xl font-bold mb-6">🎮 Create a Match</h1>
-      <div className="w-full max-w-md bg-[#1a1a2e] p-6 rounded-lg shadow-xl">
+    <div className="relative min-h-screen bg-[#0d0d1f] text-white flex flex-col items-center justify-center px-4">
+      {/* ✨ Sparkles */}
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        {sparklePoints.map((p, idx) => (
+          <span
+            key={idx}
+            className="absolute rounded-full bg-white/80 animate-sparkle"
+            style={{
+              width: p.size,
+              height: p.size,
+              top: p.top,
+              left: p.left,
+              animationDelay: p.delay,
+              animationDuration: p.duration,
+            }}
+          />
+        ))}
+      </div>
+
+      {/* Title with gradient text */}
+      <h1 className="text-3xl font-extrabold mb-6 bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent drop-shadow-lg">
+        🎮 Create a Match
+      </h1>
+
+      {/* Card */}
+      <div className="w-full max-w-md bg-[#1a1a2e] p-6 rounded-xl border border-purple-700/40 shadow-[0_0_25px_rgba(139,92,246,0.25)] relative z-10">
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
 
         <label className="block mb-2 text-sm font-medium">Select Game</label>
         <select
           value={game}
           onChange={(e) => setGame(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-[#292947] text-white"
+          className="w-full p-2 mb-4 rounded-xl bg-[#292947] text-white focus:border-purple-500 focus:ring-purple-500"
         >
           <option value="">-- Choose Game --</option>
           {games.map((g) => (
@@ -232,7 +252,7 @@ function CreateMatchPage() {
         <select
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
-          className="w-full p-2 mb-4 rounded bg-[#292947] text-white"
+          className="w-full p-2 mb-4 rounded-xl bg-[#292947] text-white focus:border-purple-500 focus:ring-purple-500"
         >
           <option value="">-- Choose Console --</option>
           {consoles.map((c) => (
@@ -246,7 +266,7 @@ function CreateMatchPage() {
         <select
           value={entryFee}
           onChange={(e) => setEntryFee(Number(e.target.value))}
-          className="w-full p-2 mb-2 rounded bg-[#292947] text-white"
+          className="w-full p-2 mb-2 rounded-xl bg-[#292947] text-white focus:border-purple-500 focus:ring-purple-500"
         >
           {ENTRY_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -256,21 +276,39 @@ function CreateMatchPage() {
           Disclaimer: All wagers are conducted exclusively in TrenCoin (TC) on devnet. These are test tokens for development purposes only.
         </p>
 
+        {/* Gradient CTA */}
         <button
           onClick={handleCreateMatch}
           disabled={loading}
-          className="w-full bg-yellow-400 text-black font-bold py-2 rounded hover:bg-yellow-500 transition disabled:opacity-50"
+          className="
+            w-full rounded-full px-6 py-3 font-extrabold
+            bg-gradient-to-r from-fuchsia-500 via-purple-600 to-cyan-500
+            text-white shadow-[0_0_20px_rgba(139,92,246,0.5)]
+            transition hover:scale-105 hover:shadow-[0_0_32px_rgba(6,182,212,0.75)]
+            disabled:opacity-50
+          "
         >
           {loading ? 'Creating...' : 'Create Match'}
         </button>
       </div>
+
+      {/* Sparkle keyframes */}
+      <style jsx>{`
+        @keyframes sparkle {
+          0%, 100% { opacity: 0.7; transform: scale(1); }
+          50%      { opacity: 0;   transform: scale(0.5); }
+        }
+        .animate-sparkle {
+          animation-name: sparkle;
+          animation-iteration-count: infinite;
+          animation-timing-function: ease-in-out;
+        }
+      `}</style>
     </div>
   );
 }
 
 export default CreateMatchPage;
-
-
 
 
 
