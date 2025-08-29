@@ -1,20 +1,39 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* custom spin animation override */
 @keyframes spin {
   to {
     transform: rotate(360deg);
   }
 }
-
 .animate-spin {
   animation: spin 1s linear infinite;
 }
 
+/* base body styles (applies everywhere) */
 body {
   margin: 0;
   padding: 0;
   font-family: system-ui, sans-serif;
-  background-color: #1a202c;
+  background-color: #1a202c; /* dark gray background */
   color: white;
+}
+
+/* === STEP 1: mobile-only helpers (safe & no desktop changes) === */
+
+/* iPhone/Android safe-area vars (no visual effect on desktop) */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Bigger tap targets on small screens only (iOS guideline ≥ 44px) */
+@media (max-width: 640px) {
+  button,
+  [role="button"],
+  .btn {
+    min-height: 44px;
+  }
 }

@@ -5,6 +5,7 @@ import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarNav from './SidebarNav';
 import Header from './Header';
+import MobileHeader from '@/components/MobileHeader'; // mobile header
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../lib/firebase';
@@ -59,7 +60,12 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300">
+        {/* Mobile header (md:hidden inside component) */}
+        <MobileHeader />
+
+        {/* Desktop header (hidden on mobile inside Header.tsx with `hidden md:flex`) */}
         {isHome && <Header user={user} tc={tc} division={division} />}
+
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
     </div>
@@ -67,5 +73,3 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
 };
 
 export default Layout;
-
-

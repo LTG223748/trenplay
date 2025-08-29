@@ -1,5 +1,5 @@
 // components/GameFilterBar.tsx
-import React from "react";
+import React, { useMemo } from "react";
 import {
   FaBasketballBall,
   FaFutbol,
@@ -15,15 +15,13 @@ import { TrenGameId } from "../lib/games";
 type GameKey = TrenGameId | "all";
 
 interface GameFilterBarProps {
-  /** NEW props */
   selectedGameKey?: GameKey;
   onChange?: (key: GameKey) => void;
 
-  /** BACK-COMPAT props */
+  // Back-compat props
   activeGame?: GameKey | "All" | "ALL";
   setActiveGame?: (key: GameKey | "All" | "ALL") => void;
 
-  /** Optional: control which tabs appear and order */
   tabs?: GameKey[];
 }
 
@@ -54,19 +52,18 @@ const LABELS: Record<GameKey, string> = {
 };
 
 const ICONS: Record<GameKey, React.ReactNode> = {
-  all: <MdSportsEsports className="text-purple-400 text-2xl" />,
-  nba2k: <FaBasketballBall className="text-orange-400 text-lg" />,
-  fifa: <FaFutbol className="text-green-400 text-lg" />,
-  ufc: <GiBoxingGlove className="text-red-500 text-lg" />,
-  madden: <FaFootballBall className="text-yellow-500 text-lg" />,
-  cfb: <FaGraduationCap className="text-blue-300 text-lg" />,
-  mlb: <FaBaseballBall className="text-pink-300 text-lg" />,
-  nhl: <GiHockey className="text-cyan-300 text-lg" />,
-  fortnite_build: <MdBuild className="text-emerald-300 text-xl" />,
-  rocket_league: <FaCar className="text-sky-300 text-xl" />,
+  all: <MdSportsEsports className="text-purple-300 text-[18px] sm:text-[20px]" />,
+  nba2k: <FaBasketballBall className="text-orange-400 text-[16px] sm:text-[18px]" />,
+  fifa: <FaFutbol className="text-green-400 text-[16px] sm:text-[18px]" />,
+  ufc: <GiBoxingGlove className="text-red-400 text-[16px] sm:text-[18px]" />,
+  madden: <FaFootballBall className="text-yellow-400 text-[16px] sm:text-[18px]" />,
+  cfb: <FaGraduationCap className="text-blue-300 text-[16px] sm:text-[18px]" />,
+  mlb: <FaBaseballBall className="text-pink-300 text-[16px] sm:text-[18px]" />,
+  nhl: <GiHockey className="text-cyan-300 text-[16px] sm:text-[18px]" />,
+  fortnite_build: <MdBuild className="text-emerald-300 text-[18px] sm:text-[20px]" />,
+  rocket_league: <FaCar className="text-sky-300 text-[18px] sm:text-[20px]" />,
 };
 
-// normalize any variant of "All" to "all"
 const toKey = (k: any): GameKey =>
   typeof k === "string" && k.toLowerCase() === "all" ? "all" : (k as GameKey);
 
@@ -77,7 +74,6 @@ export default function GameFilterBar({
   setActiveGame,
   tabs = DEFAULT_TABS,
 }: GameFilterBarProps) {
-  // Support both prop styles + normalization
   const current: GameKey = toKey(selectedGameKey ?? activeGame ?? "all");
   const handleChange = (key: GameKey) => {
     const norm = toKey(key);
@@ -85,44 +81,57 @@ export default function GameFilterBar({
     else if (setActiveGame) setActiveGame(norm);
   };
 
+  const items = useMemo(() => tabs, [tabs]);
+
   return (
-    <div
-      className="flex justify-between bg-[#1a0033]/80 backdrop-blur-md border border-white/10 p-4 rounded-2xl shadow-inner mb-6"
-      style={{ minHeight: 153 }}
-    >
-      {tabs.map((key) => {
-        const active = current === key;
-        return (
-          <button
-            key={key}
-            onClick={() => handleChange(key)}
-            className={`
-              flex flex-col items-center justify-center flex-1 mx-2
-              min-w-0 rounded-[36px] border-2
-              font-orbitron font-black uppercase tracking-widest
-              text-base sm:text-lg transition-all duration-300
-              ${active
-                ? "bg-white/70 text-black border-yellow-200 scale-105 z-10 shadow-[0_0_20px_rgba(250,204,21,.55)]"
-                : "bg-white/20 border-[#6648b0] text-white hover:bg-white/30 hover:shadow-[0_0_14px_rgba(168,85,247,.35)]"}
-              hover:scale-105
-            `}
-            style={{
-              minHeight: 108,
-              maxWidth: "225px",
-              backdropFilter: "blur(8px)",
-              letterSpacing: "0.08em",
-            }}
-          >
-            <div className="mb-1">{ICONS[key]}</div>
-            <span className="leading-tight text-shadow-lg break-words whitespace-pre-line text-sm sm:text-base text-center">
-              {LABELS[key]}
-            </span>
-          </button>
-        );
-      })}
+    <div className="rounded-2xl border border-white/10 bg-[#1a0f2a]/70 backdrop-blur-md p-3 sm:p-4 mb-4">
+      {/* 
+        Grid that wraps without scrolling.
+        - On narrow screens it becomes 2 rows
+        - Each item has a flexible min width so everything stays visible
+      */}
+      <div
+        className="
+          grid gap-3 sm:gap-4 
+          grid-cols-2 
+          [@media(min-width:640px)]:grid-cols-3
+          [@media(min-width:900px)]:grid-cols-5
+          [@media(min-width:1180px)]:grid-cols-7
+        "
+      >
+        {items.map((key) => {
+          const active = current === key;
+          return (
+            <button
+              key={key}
+              onClick={() => handleChange(key)}
+              className={[
+                "relative flex items-center justify-center gap-2",
+                "rounded-[28px] border transition-all duration-200",
+                "px-3 py-3 sm:px-4 sm:py-4",
+                "font-orbitron font-black uppercase tracking-[0.10em]",
+                "text-[12px] sm:text-[13px] leading-none",
+                active
+                  ? // Active: bright surface + neon ring
+                    "bg-white/80 text-black border-yellow-200 shadow-[0_0_20px_rgba(250,204,21,.45)]"
+                  : // Inactive: muted pill with subtle outline
+                    "bg-white/12 text-white border-[#6a53b3]/70 hover:bg-white/18 hover:shadow-[0_0_14px_rgba(168,85,247,.35)]",
+              ].join(" ")}
+              style={{ minHeight: 64 }}
+            >
+              <span className={active ? "drop-shadow-[0_0_8px_rgba(255,255,255,.35)]" : ""}>
+                {ICONS[key]}
+              </span>
+              <span className="text-center">{LABELS[key]}</span>
+
+              {/* active glow ring */}
+              {active && (
+                <span className="pointer-events-none absolute inset-0 rounded-[28px] ring-2 ring-yellow-300/70" />
+              )}
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }
-
-
-

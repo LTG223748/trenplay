@@ -1,3 +1,4 @@
+// components/Header.tsx
 'use client';
 
 import React, { useEffect, useMemo, useState } from 'react';
@@ -123,10 +124,10 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
     };
   }, [division, elo]);
 
-  // ---------- SSR shell to avoid hydration mismatch ----------
+  // ---------- SSR shell to avoid hydration mismatch (DESKTOP ONLY) ----------
   const headerShell = (
     <header
-      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
+      className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
       {/* Left: logo (unchanged size; cropped by header if it overflows) */}
@@ -152,10 +153,10 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
 
   if (!mounted) return headerShell;
 
-  // ---------- Real header ----------
+  // ---------- Real header (DESKTOP ONLY) ----------
   return (
     <header
-      className="relative z-40 flex justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
+      className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
       {/* Rocket overlay (pointer-events disabled by default in its impl) */}
@@ -223,7 +224,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
               <button
                 type="button"
                 className="text-yellow-300 bg-[#2d0140] px-3 py-1 rounded-lg text-lg font-bold border border-yellow-500 shadow"
-                onClick={() => setShowDivPopover(v => !v)} // mobile toggle
+                onClick={() => setShowDivPopover(v => !v)} // mobile toggle (no-op on desktop)
                 aria-haspopup="dialog"
                 aria-expanded={showDivPopover}
                 aria-label="Division & Elo"
