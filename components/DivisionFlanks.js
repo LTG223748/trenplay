@@ -18,13 +18,13 @@ export default function DivisionFlanks() {
   ];
 
   function Card({ title, range, emoji, ring, glow, grad, badgeBg, badgeLabel, size = "md" }) {
-    const titleSize = size === "lg" ? "text-2xl md:text-3xl" : "text-xl md:text-2xl";
-    const emojiSize = size === "lg" ? "text-4xl md:text-5xl" : "text-3xl md:text-4xl";
+    const titleSize = size === "lg" ? "text-xl md:text-3xl" : "text-lg md:text-2xl";
+    const emojiSize = size === "lg" ? "text-3xl md:text-5xl" : "text-2xl md:text-4xl";
 
     return (
       <div
         className={[
-          "cursor-default rounded-2xl p-5 md:p-6 text-white backdrop-blur-sm",
+          "cursor-default rounded-2xl p-3 md:p-6 text-white backdrop-blur-sm",
           "bg-gradient-to-br", grad,
           "ring-1", ring,
           "transition-transform duration-200 hover:-translate-y-0.5",
@@ -32,7 +32,7 @@ export default function DivisionFlanks() {
           "shadow-[0_12px_30px_rgba(0,0,0,.35)]",
         ].join(" ")}
       >
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex items-center gap-2 md:gap-3 mb-1">
           <span className={["leading-none", emojiSize].join(" ")} aria-hidden>
             {emoji}
           </span>
@@ -41,7 +41,7 @@ export default function DivisionFlanks() {
               titleSize,
               "font-extrabold tracking-wide",
               "text-yellow-300",
-              "font-[\'Orbitron\',_ui-sans-serif]",
+              "font-['Orbitron',_ui-sans-serif]",
               "[text-shadow:0_0_14px_rgba(250,204,21,.65)]",
             ].join(" ")}
           >
@@ -49,13 +49,13 @@ export default function DivisionFlanks() {
           </h4>
         </div>
 
-        <p className="text-sm md:text-base text-gray-200/90">{range}</p>
+        <p className="text-xs md:text-base text-gray-200/90">{range}</p>
 
-        {/* Prestige badge */}
         <div
           className={[
-            "mt-4 inline-flex items-center gap-2 rounded-full px-3 py-1",
-            "text-xs md:text-sm ring-1 ring-white/10",
+            "mt-3 md:mt-4 inline-flex items-center gap-2 rounded-full",
+            "px-2.5 py-0.5 md:px-3 md:py-1",
+            "text-[10px] md:text-sm ring-1 ring-white/10",
             "text-white/90", badgeBg,
           ].join(" ")}
         >
@@ -66,30 +66,25 @@ export default function DivisionFlanks() {
   }
 
   return (
-    <section className="relative mx-auto mt-6 md:mt-8 px-6 max-w-6xl">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 items-center">
+    <section className="relative mx-auto mt-4 md:mt-8 px-3 md:px-6 max-w-6xl">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-8 items-start">
         {/* Left stack */}
-        <div className="flex flex-col gap-4 max-w-sm w-full mx-auto">
+        <div className="flex flex-col gap-3 md:gap-4 w-full md:max-w-sm mx-auto">
           <Card {...TIERS[0]} />
           <Card {...TIERS[1]} />
         </div>
 
-        {/* Center mascot — now ANIMATED */}
+        {/* Center mascot – smaller on mobile */}
         <div className="flex items-center justify-center">
-          <div className="relative w-[260px] h-[360px] sm:w-[300px] sm:h-[420px]">
-            {/* soft aura behind */}
+          <div className="relative w-[120px] h-[180px] sm:w-[160px] sm:h-[220px] md:w-[260px] md:h-[360px] lg:w-[300px] lg:h-[420px]">
             <div
-              className="absolute inset-0 rounded-[40%] blur-2xl opacity-70 pointer-events-none"
+              className="absolute inset-0 rounded-[40%] blur-xl opacity-60 pointer-events-none"
               style={{
                 background:
-                  "radial-gradient(ellipse at center, rgba(250,204,21,.35) 0%, rgba(168,85,247,.22) 45%, transparent 75%)",
+                  "radial-gradient(ellipse at center, rgba(250,204,21,.25) 0%, rgba(168,85,247,.18) 45%, transparent 75%)",
               }}
             />
-
-            {/* floating glow base */}
-            <div className="absolute inset-x-6 bottom-6 h-6 rounded-[50%] bg-black/40 blur-[10px] opacity-30 animate-shadowPulse" />
-
-            {/* mascot */}
+            <div className="absolute inset-x-4 bottom-2 md:bottom-6 h-3 md:h-6 rounded-[50%] bg-black/40 blur-[6px] md:blur-[10px] opacity-25 md:opacity-30 animate-shadowPulse" />
             <div className="absolute inset-0 z-10 flex items-center justify-center will-change-transform">
               <div className="relative w-full h-full animate-floatSlow">
                 <Image
@@ -105,52 +100,41 @@ export default function DivisionFlanks() {
         </div>
 
         {/* Right stack */}
-        <div className="flex flex-col gap-4 max-w-sm w-full mx-auto">
+        <div className="flex flex-col gap-3 md:gap-4 w-full md:max-w-sm mx-auto">
           <Card {...TIERS[2]} size="lg" />
           <Card {...TIERS[3]} size="lg" />
         </div>
       </div>
 
       <style jsx>{`
-        /* gentle up-down float */
         @keyframes floatSlow {
           0%   { transform: translateY(0) rotate(0deg); }
-          50%  { transform: translateY(-8px) rotate(-0.3deg); }
+          50%  { transform: translateY(-6px) rotate(-0.3deg); }
           100% { transform: translateY(0) rotate(0deg); }
         }
         .animate-floatSlow {
           animation: floatSlow 3.3s ease-in-out infinite;
         }
-
-        /* soft breathing glow on the mascot (drop-shadow via filter) */
         @keyframes breatheGlow {
-          0%, 100% { filter: drop-shadow(0 0 14px rgba(250,204,21,.35)) drop-shadow(0 0 28px rgba(168,85,247,.25)); }
-          50%      { filter: drop-shadow(0 0 24px rgba(250,204,21,.55)) drop-shadow(0 0 36px rgba(168,85,247,.35)); }
+          0%, 100% { filter: drop-shadow(0 0 10px rgba(250,204,21,.3)) drop-shadow(0 0 20px rgba(168,85,247,.25)); }
+          50%      { filter: drop-shadow(0 0 18px rgba(250,204,21,.45)) drop-shadow(0 0 28px rgba(168,85,247,.35)); }
         }
         .animate-breatheGlow {
           animation: breatheGlow 2.8s ease-in-out infinite;
         }
-
-        /* shadow pad beneath the mascot to sell the float */
         @keyframes shadowPulse {
-          0%, 100% { transform: scaleX(1); opacity: .30; }
-          50%      { transform: scaleX(1.12); opacity: .40; }
+          0%, 100% { transform: scaleX(1); opacity: .25; }
+          50%      { transform: scaleX(1.1); opacity: .35; }
         }
         .animate-shadowPulse {
           animation: shadowPulse 3.3s ease-in-out infinite;
         }
-
-        /* reduce motion for users who prefer it */
         @media (prefers-reduced-motion: reduce) {
           .animate-floatSlow,
           .animate-breatheGlow,
           .animate-shadowPulse {
             animation: none !important;
           }
-        }
-
-        .drop-shadow-2xl {
-          filter: drop-shadow(0 18px 36px rgba(0, 0, 0, 0.35));
         }
       `}</style>
     </section>

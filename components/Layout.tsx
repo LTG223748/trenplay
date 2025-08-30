@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import SidebarNav from './SidebarNav';
 import Header from './Header';
 import MobileHeader from '@/components/MobileHeader'; // mobile header
+import MobileSignUp from '@/components/MobileSignUp'; // 👈 added
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../lib/firebase';
@@ -66,8 +67,14 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
         {/* Desktop header (hidden on mobile inside Header.tsx with `hidden md:flex`) */}
         {isHome && <Header user={user} tc={tc} division={division} />}
 
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        {/* Add bottom padding so content isn't hidden behind MobileSignUp on mobile */}
+        <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6">
+          {children}
+        </main>
       </div>
+
+      {/* Mobile sticky Join/Login bar (only when logged out) */}
+      {!user && <MobileSignUp />}
     </div>
   );
 };

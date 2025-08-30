@@ -11,7 +11,7 @@ const COIN_IMG  = '/images/coin.png';
 
 // Tournament slide assets
 const MASCOT_TOURNEY_IMG = '/images/mascot-tournament.png';
-const RL_TOURNEY_IMG     = '/images/rocketleague-tournament.png'; // new 1920×1080 version
+const RL_TOURNEY_IMG     = '/images/rocketleague-tournament.png';
 
 type LogoSlide = {
   kind: 'logo';
@@ -77,7 +77,6 @@ const slides: Slide[] = [
   },
 ];
 
-// coin sparkle positions (logo slide only)
 const coinPos = [
   { top: '14%', left: '17%' }, { top: '22%', left: '31%' }, { top: '16%', left: '55%' },
   { top: '11%', left: '73%' }, { top: '38%', left: '14%' }, { top: '62%', left: '19%' },
@@ -98,10 +97,14 @@ export default function HeroSlider() {
 
   const slide = slides[current];
 
+  // Hide mascot on mobile ONLY for the tournaments (Rocket League) slide
+  const hideMascotOnMobile = slide.kind === 'photo' && slide.alt === 'Tournaments';
+
   return (
     <div className="relative w-full">
-      <div className="rounded-xl overflow-hidden mb-8 shadow-lg ring-[3px] ring-purple-500/50 animate-glow">
-        <div className="relative w-full h-72 sm:h-80 lg:h-96">
+      <div className="rounded-xl overflow-hidden mb-6 md:mb-8 shadow-lg ring-[2px] md:ring-[3px] ring-purple-500/50 animate-glow">
+        {/* Height scales by viewport (desktop back to ~h-96) */}
+        <div className="relative w-full h-[260px] sm:h-[300px] md:h-[320px] lg:h-[384px] xl:h-[384px]">
 
           {slide.kind === 'photo' ? (
             <>
@@ -116,35 +119,57 @@ export default function HeroSlider() {
 
               {(slide as PhotoSlide).foregroundMascot && (
                 <>
+                  {/* Shadow puck (keep on all sizes; hide on mobile for tournaments) */}
                   <div
-                    className="absolute right-20 bottom-3 z-10 pointer-events-none select-none"
+                    className={[
+                      "absolute z-10 pointer-events-none select-none right-2 sm:right-6 md:right-20",
+                      "top-1 md:top-auto md:bottom-3",
+                      hideMascotOnMobile ? "hidden md:block" : "",
+                    ].join(" ")}
                     style={{
-                      width: '110px',
-                      height: '30px',
-                      borderRadius: '50%',
+                      width: '64px',
+                      height: '18px',
+                      borderRadius: '9999px',
                       background: 'radial-gradient(ellipse at center, #000 55%, transparent 100%)',
                       filter: 'blur(8px)',
-                      opacity: 0.3,
+                      opacity: 0.22,
                     }}
                   />
+                  {/* Glow basin (MOBILE ONLY) */}
+                  {!hideMascotOnMobile && (
+                    <div
+                      className={[
+                        "absolute z-20 pointer-events-none select-none right-2 sm:right-6",
+                        "top-0.5",
+                        "block md:hidden", // <-- keep glow on mobile, remove on desktop
+                      ].join(" ")}
+                      style={{
+                        width: '130px',
+                        height: '140px',
+                        borderRadius: '38% 38% 46% 46%',
+                        background:
+                          'radial-gradient(ellipse at center, #fff9c4aa 50%, #ffe06644 72%, transparent 100%)',
+                        filter: 'blur(14px)',
+                        opacity: 0.42,
+                      }}
+                    />
+                  )}
+                  {/* Mascot: top-right on mobile, bottom-right on md+ */}
                   <div
-                    className="absolute right-8 bottom-0 z-20 pointer-events-none select-none"
-                    style={{
-                      width: '320px',
-                      height: '360px',
-                      borderRadius: '38% 38% 46% 46%',
-                      background:
-                        'radial-gradient(ellipse at center, #fff9c4aa 50%, #ffe06644 72%, transparent 100%)',
-                      filter: 'blur(16px)',
-                      opacity: 0.55,
-                    }}
-                  />
-                  <div className="absolute right-8 bottom-0 z-30 flex items-end justify-center w-[320px] h-[360px] overflow-hidden">
+                    className={[
+                      "absolute z-30 flex items-start md:items-end justify-center",
+                      "right-2 sm:right-6 md:right-8",
+                      "top-1 md:top-auto md:bottom-0",
+                      "w-[100px] h-[120px] sm:w-[140px] sm:h-[160px] md:w-[280px] md:h-[320px]",
+                      "overflow-hidden opacity-90 md:opacity-100",
+                      hideMascotOnMobile ? "hidden md:flex" : "",
+                    ].join(" ")}
+                  >
                     <Image
                       src={(slide as PhotoSlide).foregroundMascot!}
                       alt="Mascot"
                       fill
-                      className="object-contain object-bottom pointer-events-none select-none mascot-float mascot-glow"
+                      className="object-contain object-top md:object-bottom pointer-events-none select-none"
                       priority
                       style={{
                         transform: `translateY(${(slide as PhotoSlide).mascotOffsetY ?? 0}px)`,
@@ -158,56 +183,65 @@ export default function HeroSlider() {
           ) : (
             <div className="absolute inset-0 z-0">
               <div className="absolute inset-0 bg-gradient-to-r from-[#32104b] via-[#1a0030] to-[#32104b] opacity-95" />
-              {coinPos.map((p, idx) => (
-                <Image
-                  key={idx}
-                  src={COIN_IMG}
-                  alt="Coin"
-                  width={22}
-                  height={22}
-                  style={{
-                    position: 'absolute',
-                    top: p.top,
-                    left: p.left,
-                    zIndex: 15,
-                    pointerEvents: 'none',
-                    opacity: 0,
-                    animation: `coinTwinkle 2.2s linear infinite`,
-                    animationDelay: `${coinAnim[idx]}s`,
-                  }}
-                  className="coin-twinkle"
-                  priority={idx < 4}
-                />
-              ))}
+
+              {/* Coins */}
+              <div className="absolute inset-0">
+                {coinPos.map((p, idx) => (
+                  <div
+                    key={idx}
+                    style={{
+                      position: 'absolute',
+                      top: p.top,
+                      left: p.left,
+                      zIndex: 15,
+                      pointerEvents: 'none',
+                      opacity: 0,
+                      animation: `coinTwinkle 2.2s linear infinite`,
+                      animationDelay: `${coinAnim[idx]}s`,
+                    }}
+                    className="coin-twinkle scale-75 md:scale-100 origin-center"
+                  >
+                    <Image
+                      src={COIN_IMG}
+                      alt="Coin"
+                      width={22}
+                      height={22}
+                      priority={idx < 4}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Logo: puck on all sizes, glow ONLY on mobile, logo image */}
               <div
-                className="absolute right-20 bottom-3 z-10 pointer-events-none select-none"
+                className="absolute right-2 sm:right-6 md:right-20 top-1 md:top-auto md:bottom-3 z-10 pointer-events-none select-none"
                 style={{
-                  width: '110px',
-                  height: '30px',
-                  borderRadius: '50%',
+                  width: '64px',
+                  height: '18px',
+                  borderRadius: '9999px',
                   background: 'radial-gradient(ellipse at center, #000 55%, transparent 100%)',
                   filter: 'blur(8px)',
-                  opacity: 0.3,
+                  opacity: 0.22,
                 }}
               />
               <div
-                className="absolute right-8 bottom-0 z-10 pointer-events-none select-none"
+                className="absolute right-2 sm:right-6 top-0.5 z-10 pointer-events-none select-none block md:hidden"
                 style={{
-                  width: '320px',
-                  height: '360px',
+                  width: '130px',
+                  height: '140px',
                   borderRadius: '38% 38% 46% 46%',
                   background:
                     'radial-gradient(ellipse at center, #fff9c4aa 50%, #ffe06644 72%, transparent 100%)',
-                  filter: 'blur(16px)',
-                  opacity: 0.6,
+                  filter: 'blur(14px)',
+                  opacity: 0.42,
                 }}
               />
-              <div className="absolute right-8 bottom-0 z-20 flex items-end justify-center w-[320px] h-[360px] overflow-hidden">
+              <div className="absolute right-2 sm:right-6 md:right-8 top-1 md:top-auto md:bottom-0 z-20 flex items-start md:items-end justify-center w-[100px] h-[120px] sm:w-[140px] sm:h-[160px] md:w-[280px] md:h-[320px] overflow-hidden opacity-90 md:opacity-100">
                 <Image
                   src={HERO_LOGO}
                   alt={slide.alt}
                   fill
-                  className="object-contain object-bottom pointer-events-none select-none mascot-float mascot-glow"
+                  className="object-contain object-top md:object-bottom pointer-events-none select-none"
                   priority
                   style={{ transform: 'translateY(0px)' }}
                 />
@@ -215,19 +249,20 @@ export default function HeroSlider() {
             </div>
           )}
 
-          <div className="relative z-40 p-8 flex flex-col justify-center h-full max-w-xl">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-yellow-300 mb-2 [text-shadow:0_0_16px_rgba(250,204,21,.7)]">
+          {/* Text overlay */}
+          <div className="relative z-40 h-full flex flex-col justify-center p-4 sm:p-6 md:p-8 max-w-[88%] sm:max-w-xl">
+            <h2 className="text-xl sm:text-2xl md:text-4xl font-extrabold text-yellow-300 mb-1 sm:mb-2 [text-shadow:0_0_16px_rgba(250,204,21,.7)]">
               {slide.headline}
             </h2>
             {slide.subline && (
-              <p className="text-xl sm:text-2xl text-purple-200 font-bold mb-4">
+              <p className="text-sm sm:text-base md:text-2xl text-purple-200 font-bold mb-3 sm:mb-4">
                 {slide.subline}
               </p>
             )}
             {slide.ctaHref && slide.ctaLabel && (
               <Link
                 href={slide.ctaHref}
-                className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-2 rounded-full transition shadow-[0_0_18px_rgba(250,204,21,.55)]"
+                className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold rounded-full transition shadow-[0_0_18px_rgba(250,204,21,.55)] px-4 py-2 sm:px-6 sm:py-2.5 text-xs sm:text-sm md:text-base"
               >
                 {slide.ctaLabel}
               </Link>
@@ -242,9 +277,6 @@ export default function HeroSlider() {
           50%      { box-shadow: 0 0 40px 8px rgba(168, 85, 247, 0.8); }
         }
         .animate-glow { animation: pulseGlow 3s ease-in-out infinite; }
-        .mascot-glow {
-          filter: drop-shadow(0 0 12px #fffde466) drop-shadow(0 0 32px #ffe06644) drop-shadow(0 3px 10px #000a);
-        }
         @keyframes coinTwinkle {
           0% { opacity: 0; }
           12% { opacity: 1; }
