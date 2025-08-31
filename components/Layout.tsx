@@ -5,8 +5,9 @@ import React, { ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import SidebarNav from './SidebarNav';
 import Header from './Header';
-import MobileHeader from '@/components/MobileHeader'; // mobile header
-import MobileSignUp from '@/components/MobileSignUp'; // 👈 added
+import MobileHeader from '@/components/MobileHeader';
+import MobileSidebar from '@/components/MobileSidebar'; // 👈 added
+import MobileSignUp from '@/components/MobileSignUp';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../lib/firebase';
@@ -17,8 +18,8 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-const COLLAPSED_WIDTH = 40;   // collapsed sidebar (px)
-const EXPANDED_WIDTH = 224;   // expanded sidebar (px)
+const COLLAPSED_WIDTH = 40;
+const EXPANDED_WIDTH = 224;
 
 const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
   const { expanded } = useSidebar();
@@ -50,11 +51,14 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
         />
       </div>
 
-      {/* Sidebar */}
-      <SidebarNav />
+      {/* Sidebar (desktop only, hidden on mobile) */}
+      <div className="hidden md:block">
+        <SidebarNav />
+      </div>
 
-      {/* Spacer for fixed sidebar */}
+      {/* Spacer for fixed sidebar (desktop only) */}
       <div
+        className="hidden md:block"
         style={{ width: sidebarWidth, minWidth: sidebarWidth, flexShrink: 0 }}
         aria-hidden
       />
@@ -63,6 +67,11 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
       <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300">
         {/* Mobile header (md:hidden inside component) */}
         <MobileHeader />
+
+        {/* Mobile sidebar trigger + overlay */}
+        <div className="md:hidden">
+          <MobileSidebar />
+        </div>
 
         {/* Desktop header (hidden on mobile inside Header.tsx with `hidden md:flex`) */}
         {isHome && <Header user={user} tc={tc} division={division} />}

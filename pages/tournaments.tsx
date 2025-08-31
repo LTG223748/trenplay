@@ -51,7 +51,7 @@ interface Tournament {
   startDate: any;
   status: string;
   type: number;
-  platform: string;            // "Console-Green" | "Console-Blue"
+  platform: string; // "Console-Green" | "Console-Blue"
   division?: string;
   matchSchedule?: any[];
   [key: string]: any;
@@ -134,14 +134,14 @@ export default function TournamentsPage() {
                 {/* soft gradient halo */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-[#4b0082] to-[#dcb0ff] opacity-20 blur-xl" />
 
-                {/* tiny coin sparkles (global keyframe so they always animate) */}
+                {/* tiny coin sparkles */}
                 <div className="pointer-events-none absolute inset-0">
                   {Array.from({ length: 14 }).map((_, i) => (
                     <span
                       key={i}
                       className="tp-sparkle absolute block rounded-full bg-yellow-300"
                       style={{
-                        width: Math.random() < 0.25 ? 3 : 2,   // subtle variance
+                        width: Math.random() < 0.25 ? 3 : 2,
                         height: Math.random() < 0.25 ? 3 : 2,
                         top: `${5 + Math.random() * 85}%`,
                         left: `${5 + Math.random() * 85}%`,
@@ -155,7 +155,8 @@ export default function TournamentsPage() {
                 </div>
 
                 <div className="relative z-10 space-y-4">
-                  <div className="absolute top-4 right-4 flex items-center">
+                  {/* Console badge — hidden on mobile */}
+                  <div className="hidden md:flex absolute top-4 right-4 items-center">
                     {getConsoleIcon(t.platform)}
                     <span className="font-bold uppercase tracking-wide text-xs ml-1 text-white">
                       Console
@@ -185,7 +186,7 @@ export default function TournamentsPage() {
                   {/* Bracket preview */}
                   <BracketDisplay tournament={t} />
 
-                  {/* Join button with subtle "casino pop" */}
+                  {/* Join button with subtle pop */}
                   <div className="inline-block animate-[pop_1.8s_ease-in-out_infinite]">
                     <JoinTournamentButton tournament={t} />
                   </div>
@@ -200,15 +201,12 @@ export default function TournamentsPage() {
 
   return (
     <div className="min-h-screen bg-[#0c001a] px-6 py-10 font-[Orbitron] text-white">
-      {/* Grand-entrance divider */}
       <TournamentHero division={currentDivision} />
 
-      {/* Division title */}
       <h1 className="text-3xl sm:text-4xl font-extrabold text-[#dcb0ff] mb-6 drop-shadow-lg">
         🏆 {currentDivision} Division Tournaments
       </h1>
 
-      {/* USD Disclaimer at top right */}
       <div className="w-full flex justify-end mb-4">
         <div className="text-xs text-gray-400 italic max-w-xs text-right">
           Disclaimer: All tournaments use TrenCoin (TC). USD values are estimates
@@ -216,7 +214,6 @@ export default function TournamentsPage() {
         </div>
       </div>
 
-      {/* Empty state or console sections */}
       {nothingHere ? (
         <div className="my-16 flex flex-col items-center justify-center text-center">
           <div className="mb-4 text-5xl">😴</div>
@@ -235,7 +232,6 @@ export default function TournamentsPage() {
             'Console (Green)',
             'border-green-500'
           )}
-
           {renderTournaments(
             blueTournaments,
             <span className="text-blue-400 text-2xl">🎮</span>,
@@ -245,7 +241,6 @@ export default function TournamentsPage() {
         </>
       )}
 
-      {/* pop + GLOBAL sparkle keyframes/class (so the dots always animate) */}
       <style jsx global>{`
         @keyframes pop {
           0%, 100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(250,204,21,0)); }
@@ -262,8 +257,3 @@ export default function TournamentsPage() {
     </div>
   );
 }
-
-
-
-
-

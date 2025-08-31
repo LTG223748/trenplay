@@ -9,6 +9,12 @@ import MatchGrid from '../components/MatchGrid';
 import GameFilterBar from '../components/GameFilterBar';
 import { TrenGameId } from '../lib/games';
 
+// 👇 NEW: mobile slider filter
+import MobileGameFilter, {
+  type GameKey as MobileGameKey,
+  type ConsoleChoice
+} from '@/components/mobilegamefilter';
+
 type Match = {
   id: string;
   gameId?: TrenGameId;
@@ -29,21 +35,30 @@ function BackgroundDecor() {
       {/* base gradient */}
       <div className="absolute inset-0 bg-[#0b0b1a]" />
       {/* soft spotlight left */}
-      <div className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full blur-3xl opacity-40"
-           style={{ background: 'radial-gradient(40% 40% at 50% 50%, #7c3aed55 0%, transparent 60%)' }} />
+      <div
+        className="absolute -top-32 -left-32 h-[520px] w-[520px] rounded-full blur-3xl opacity-40"
+        style={{ background: 'radial-gradient(40% 40% at 50% 50%, #7c3aed55 0%, transparent 60%)' }}
+      />
       {/* soft spotlight right */}
-      <div className="absolute -bottom-24 -right-24 h-[520px] w-[520px] rounded-full blur-3xl opacity-40"
-           style={{ background: 'radial-gradient(40% 40% at 50% 50%, #06b6d455 0%, transparent 60%)' }} />
+      <div
+        className="absolute -bottom-24 -right-24 h-[520px] w-[520px] rounded-full blur-3xl opacity-40"
+        style={{ background: 'radial-gradient(40% 40% at 50% 50%, #06b6d455 0%, transparent 60%)' }}
+      />
       {/* subtle noise */}
-      <div className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
-           style={{ backgroundImage: 'url("data:image/svg+xml;utf8,\
+      <div
+        className="absolute inset-0 opacity-[0.06] mix-blend-overlay"
+        style={{
+          backgroundImage:
+            'url("data:image/svg+xml;utf8,\
 <svg xmlns=\'http://www.w3.org/2000/svg\' width=\'120\' height=\'120\' viewBox=\'0 0 120 120\'>\
 <filter id=\'n\'>\
 <feTurbulence type=\'fractalNoise\' baseFrequency=\'0.65\' numOctaves=\'2\' stitchTiles=\'stitch\'/>\
 <feColorMatrix type=\'saturate\' values=\'0\'/>\
 </filter>\
 <rect width=\'100%\' height=\'100%\' filter=\'url(%23n)\' opacity=\'0.6\'/>\
-</svg>")' }} />
+</svg>")',
+        }}
+      />
     </div>
   );
 }
@@ -59,7 +74,20 @@ function PageShell(props: { children: React.ReactNode }) {
   );
 }
 
-function SectionHeader({ onCreate }: { onCreate: () => void }) {
+function SectionHeader({
+  onCreate,
+  selectedPlatform,
+  setSelectedPlatform,
+}: {
+  onCreate: () => void;
+  selectedPlatform: string;
+  setSelectedPlatform: (v: string) => void;
+}) {
+  const PLATFORM_OPTIONS = [
+    { label: 'Console (Green)', value: 'Console-Green', color: 'bg-emerald-500 text-black border-emerald-300' },
+    { label: 'Console (Blue)', value: 'Console-Blue', color: 'bg-sky-500 text-black border-sky-300' },
+  ];
+
   return (
     <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4 pt-10 pb-6">
       <div>
@@ -74,22 +102,44 @@ function SectionHeader({ onCreate }: { onCreate: () => void }) {
         </p>
       </div>
 
-      <button
-        onClick={onCreate}
-        className="group relative inline-flex items-center gap-2 rounded-full px-6 py-3 font-bold tracking-wide
-                   bg-gradient-to-r from-fuchsia-500 via-purple-600 to-cyan-500
-                   shadow-[0_0_24px_rgba(139,92,246,0.45)] transition
-                   hover:scale-[1.02] hover:shadow-[0_0_36px_rgba(6,182,212,0.7)]
-                   active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:ring-offset-2 focus:ring-offset-transparent"
-      >
-        <span className="text-xl leading-none font-extrabold">＋</span>
-        Create Match
-        <span
-          className="pointer-events-none absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity
-                     bg-gradient-to-r from-transparent via-white/15 to-transparent"
-          style={{ maskImage: 'linear-gradient(90deg, transparent, black, transparent)' }}
-        />
-      </button>
+      {/* Right side: Create + (mobile-only) console buttons in same row */}
+      <div className="flex items-center gap-2">
+        {/* mobile console toggles */}
+        <div className="md:hidden flex items-center gap-2">
+          {PLATFORM_OPTIONS.map((p) => {
+            const active = selectedPlatform === p.value;
+            return (
+              <button
+                key={p.value}
+                onClick={() => setSelectedPlatform(p.value)}
+                className={`rounded-xl border px-3 py-2 text-xs font-semibold shadow transition ${
+                  active ? p.color : 'bg-white/5 text-white/85 border-white/15 hover:bg-white/10'
+                }`}
+                aria-pressed={active}
+              >
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+
+        <button
+          onClick={onCreate}
+          className="group relative inline-flex items-center gap-2 rounded-full px-6 py-3 font-bold tracking-wide
+                     bg-gradient-to-r from-fuchsia-500 via-purple-600 to-cyan-500
+                     shadow-[0_0_24px_rgba(139,92,246,0.45)] transition
+                     hover:scale-[1.02] hover:shadow-[0_0_36px_rgba(6,182,212,0.7)]
+                     active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-purple-400/70 focus:ring-offset-2 focus:ring-offset-transparent"
+        >
+          <span className="text-xl leading-none font-extrabold">＋</span>
+          Create Match
+          <span
+            className="pointer-events-none absolute inset-0 rounded-full opacity-0 group-hover:opacity-100 transition-opacity
+                       bg-gradient-to-r from-transparent via-white/15 to-transparent"
+            style={{ maskImage: 'linear-gradient(90deg, transparent, black, transparent)' }}
+          />
+        </button>
+      </div>
     </div>
   );
 }
@@ -111,7 +161,8 @@ function StickyFilters({
   ];
 
   return (
-    <div className="sticky top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pb-4
+    // hidden on mobile: desktop keeps old stacked filters
+    <div className="hidden md:block sticky top-0 z-20 -mx-4 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 pb-4
                     bg-gradient-to-b from-[#0b0b1a]/85 to-transparent backdrop-blur supports-[backdrop-filter]:backdrop-blur-md">
       <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
         {/* game tabs */}
@@ -183,6 +234,37 @@ function Matches() {
   const [selectedGameKey, setSelectedGameKey] = useState<GameKey>('all');
   const [selectedPlatform, setSelectedPlatform] = useState('Console-Green');
 
+  // 👇 local state for the mobile slider (we map between types)
+  const [mobileGame, setMobileGame] = useState<MobileGameKey>('ALL' as MobileGameKey);
+  const [mobileConsole, setMobileConsole] = useState<ConsoleChoice>(null);
+
+  // map MobileGameKey -> TrenGameId|'all'
+  function toTren(key: MobileGameKey): GameKey {
+    switch (key) {
+      case 'ALL': return 'all';
+      case 'NBA2K': return 'nba2k' as TrenGameId;
+      case 'FIFA': return 'fifa' as TrenGameId;
+      case 'UFC': return 'ufc' as TrenGameId;
+      case 'MADDEN': return 'madden' as TrenGameId;
+      case 'COLLEGE_FB': return 'college_football' as TrenGameId;
+      case 'MLB': return 'mlb_the_show' as TrenGameId;
+      case 'NHL': return 'nhl' as TrenGameId;
+      case 'FORTNITE_BUILD': return 'fortnite_build' as TrenGameId;
+      case 'ROCKET_LEAGUE': return 'rocket_league' as TrenGameId;
+      default: return 'all';
+    }
+  }
+
+  // wire mobile control -> page filters
+  useEffect(() => {
+    setSelectedGameKey(toTren(mobileGame));
+  }, [mobileGame]);
+
+  useEffect(() => {
+    if (mobileConsole === 'GREEN') setSelectedPlatform('Console-Green');
+    else if (mobileConsole === 'BLUE') setSelectedPlatform('Console-Blue');
+  }, [mobileConsole]);
+
   useEffect(() => {
     if (!user) return;
     (async () => {
@@ -226,13 +308,27 @@ function Matches() {
 
   return (
     <PageShell>
-      <SectionHeader onCreate={() => router.push('/create-match')} />
+      <SectionHeader
+        onCreate={() => router.push('/create-match')}
+        selectedPlatform={selectedPlatform}
+        setSelectedPlatform={setSelectedPlatform}
+      />
 
+      {/* Desktop filters (original) */}
       <StickyFilters
         selectedPlatform={selectedPlatform}
         setSelectedPlatform={setSelectedPlatform}
         selectedGameKey={selectedGameKey}
         setSelectedGameKey={setSelectedGameKey}
+      />
+
+      {/* Mobile slider filter (new) */}
+      <MobileGameFilter
+        selectedGame={mobileGame}
+        onSelectGame={setMobileGame}
+        selectedConsole={mobileConsole}
+        onSelectConsole={setMobileConsole}
+        createMatchHref="/create-match"
       />
 
       <div className="py-6">
@@ -242,7 +338,6 @@ function Matches() {
           <EmptyState division={userDivision} />
         ) : (
           <>
-            {/* MatchGrid handles card visuals; we give it clean spacing */}
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4 sm:p-5">
               <MatchGrid matches={filtered} selectedGameKey={selectedGameKey} />
             </div>
