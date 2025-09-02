@@ -29,7 +29,7 @@ const navLinks = [
   { href: '/profile', label: 'Profile', icon: <FaUser /> },
   { href: '/matches', label: 'Matches', icon: <FaGamepad /> },
   { href: '/refer', label: 'Refer', icon: <FaUsers /> },
-  { href: '/howto', label: 'How To Use', icon: <FaBookOpen /> },   // <--- UPDATED
+  { href: '/howto', label: 'How To Use', icon: <FaBookOpen /> },   // ✅ route fixed to match pages/howto.tsx
   { href: '/help', label: 'Help', icon: <FaQuestionCircle /> },
 ];
 
@@ -42,13 +42,9 @@ const SidebarNav: React.FC = () => {
 
   // Auto-collapse sidebar on route change
   useEffect(() => {
-    const handleRouteChange = () => {
-      setExpanded(false);
-    };
+    const handleRouteChange = () => setExpanded(false);
     router.events.on('routeChangeComplete', handleRouteChange);
-    return () => {
-      router.events.off('routeChangeComplete', handleRouteChange);
-    };
+    return () => router.events.off('routeChangeComplete', handleRouteChange);
   }, [router.events, setExpanded]);
 
   useEffect(() => {
@@ -92,7 +88,7 @@ const SidebarNav: React.FC = () => {
             <div
               className={`
                 flex items-center py-3 rounded-xl hover:bg-[#3c1a5b] transition-colors duration-300
-                ${expanded ? 'gap-4 justify-start w-full pl-3 pr-2' : 'justify-center w-full'}
+                ${expanded ? 'gap-4 justify-start w/full pl-3 pr-2' : 'justify-center w-full'}
               `}
               style={{
                 minHeight: 44,
@@ -185,13 +181,6 @@ const SidebarNav: React.FC = () => {
                 className="fixed left-14 bg-yellow-400 text-black text-xs rounded-md px-2 py-1
                   shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto 
                   transition-all whitespace-nowrap z-[9999]"
-                style={{
-                  top: undefined,
-                  bottom: undefined,
-                  marginTop: 8,
-                  minWidth: 80,
-                  left: 56,
-                }}
               >
                 Admin
               </span>

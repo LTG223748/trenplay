@@ -293,23 +293,31 @@ export default function ProfilePage() {
           {/* Avatar picker */}
           <div>
             <div className="mb-2 text-lg font-semibold text-white">Avatar:</div>
-            <div className="flex gap-3 flex-wrap">
-              {AVATAR_OPTIONS.map((opt) => {
+
+            {/* MOBILE: 3-column grid; DESKTOP: keep original flex */}
+            <div className="grid grid-cols-3 gap-3 justify-items-center md:flex md:flex-wrap md:gap-3">
+              {AVATAR_OPTIONS.map((opt, i) => {
                 const unlocked = opt.unlock({
                   wins: profile.wins ?? 0,
                   matchesPlayed: profile.matchesPlayed ?? 0,
                   tournamentsWon: profile.tournamentsWon ?? 0,
                 });
+
+                const isLast = i === AVATAR_OPTIONS.length - 1; // boxing-gloves avatar
+
                 return (
                   <div
                     key={opt.src}
-                    className={`relative rounded-full border-4 ${
+                    className={[
+                      // center the last avatar on the final row (mobile only)
+                      isLast ? 'col-start-2 md:col-start-auto' : '',
+                      'relative rounded-full border-4 transition-transform cursor-pointer',
                       avatar === opt.src
                         ? 'border-yellow-400 scale-110'
                         : unlocked
                         ? 'border-purple-400 opacity-100'
-                        : 'border-gray-500 opacity-50'
-                    } transition-transform cursor-pointer`}
+                        : 'border-gray-500 opacity-50',
+                    ].join(' ')}
                     onClick={() => unlocked && setAvatar(opt.src)}
                     title={opt.label}
                     style={{ width: 74, height: 74, overflow: 'hidden', background: '#221a40' }}
@@ -380,7 +388,6 @@ export default function ProfilePage() {
                 }}
                 vaultToken={vaultAta}
                 priceUsd={14.99}
-                // Mascot renders ONLY when active inside the component
               />
             ) : (
               <div className="text-red-400 text-sm">
@@ -442,5 +449,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-
-

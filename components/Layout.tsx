@@ -65,16 +65,22 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
 
       {/* Main Content */}
       <div className="flex flex-col flex-1 overflow-hidden transition-all duration-300">
-        {/* Mobile header (md:hidden inside component) */}
-        <MobileHeader />
+        {/* Mobile header */}
+        <div className="md:hidden">
+          <MobileHeader />
+        </div>
 
         {/* Mobile sidebar trigger + overlay */}
         <div className="md:hidden">
           <MobileSidebar />
         </div>
 
-        {/* Desktop header (hidden on mobile inside Header.tsx with `hidden md:flex`) */}
-        {isHome && <Header user={user} tc={tc} division={division} />}
+        {/* Desktop header */}
+        {isHome && (
+          <div className="hidden md:block">
+            <Header user={user} tc={tc} division={division} />
+          </div>
+        )}
 
         {/* Add bottom padding so content isn't hidden behind MobileSignUp on mobile */}
         <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6">

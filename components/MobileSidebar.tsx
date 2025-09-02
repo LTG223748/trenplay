@@ -48,7 +48,7 @@ export default function MobileSidebar({
         items: [
           { label: "Profile", href: "/profile", icon: IconUser() },
           { label: "Refer", href: "/refer", icon: IconUsers() },
-          { label: "How To Use", href: "/help", icon: IconBook() },
+          { label: "How To Use", href: "/howto", icon: IconBook() }, // ✅ route fixed
         ],
       },
     ],
@@ -149,10 +149,15 @@ export default function MobileSidebar({
             className="absolute left-0 top-0 h-full w-[72vw] max-w-[320px] sm:w-[68vw] overflow-hidden rounded-r-2xl border border-white/10 bg-[#120626]/92 shadow-2xl ring-1 ring-white/10 animate-[slideIn_.22s_ease-out]"
           >
             {/* Subtle neon edge + aurora gradient rim */}
-            <div className="pointer-events-none absolute inset-0 rounded-r-2xl" style={{
-              boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 22px rgba(137, 88, 255, 0.25)",
-              background: "radial-gradient(120% 60% at -20% 0%, rgba(88,40,180,0.25) 0%, rgba(0,0,0,0) 60%), radial-gradient(80% 40% at 120% 100%, rgba(255,214,102,0.12) 0%, rgba(0,0,0,0) 60%)",
-            }} />
+            <div
+              className="pointer-events-none absolute inset-0 rounded-r-2xl"
+              style={{
+                boxShadow:
+                  "inset 0 0 0 1px rgba(255,255,255,0.06), 0 0 22px rgba(137, 88, 255, 0.25)",
+                background:
+                  "radial-gradient(120% 60% at -20% 0%, rgba(88,40,180,0.25) 0%, rgba(0,0,0,0) 60%), radial-gradient(80% 40% at 120% 100%, rgba(255,214,102,0.12) 0%, rgba(0,0,0,0) 60%)",
+              }}
+            />
 
             {/* Content */}
             <div
@@ -181,7 +186,6 @@ export default function MobileSidebar({
               <nav className="mt-1 px-1 space-y-3 overflow-y-auto">
                 {groups.map((group, gi) => (
                   <div key={group.title}>
-                    {/* Group label with tiny coin bullet */}
                     <div className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-purple-200/80">
                       <span className="text-[10px]">🪙</span>
                       <span>{group.title}</span>
@@ -197,22 +201,19 @@ export default function MobileSidebar({
                               onClick={() => setOpen(false)}
                               className="group relative grid grid-cols-[20px,1fr,14px] items-center gap-3 rounded-xl px-3 py-2.5 text-sm leading-5 text-yellow-300/90 hover:bg-white/5 hover:text-yellow-300"
                             >
-                              {/* Active left glow bar */}
                               {active && (
                                 <span className="absolute left-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-r bg-gradient-to-b from-yellow-300 to-purple-400 shadow-[0_0_10px_rgba(250,204,21,0.6)]" />
                               )}
-
-                              {/* Icon */}
                               <span className="grid h-6 w-6 place-items-center text-[18px] opacity-95">
                                 {item.icon}
                               </span>
-
-                              {/* Label */}
-                              <span className={`truncate font-medium ${active ? "text-yellow-300" : "text-yellow-200/90"}`}>
+                              <span
+                                className={`truncate font-medium ${
+                                  active ? "text-yellow-300" : "text-yellow-200/90"
+                                }`}
+                              >
                                 {item.label}
                               </span>
-
-                              {/* Chevron */}
                               <span className="opacity-0 transition-opacity group-hover:opacity-100">
                                 {IconChevron()}
                               </span>
@@ -222,7 +223,6 @@ export default function MobileSidebar({
                       })}
                     </ul>
 
-                    {/* Faded divider */}
                     {gi < groups.length - 1 && (
                       <div className="mx-3 my-3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
                     )}
@@ -245,10 +245,19 @@ export default function MobileSidebar({
                     onClick={() => setOpen(false)}
                     className="flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-2 text-center text-sm font-semibold text-yellow-200 hover:bg-white/10 active:scale-[0.99]"
                   >
-                    Refer & Earn
+                    Refer &amp; Earn
                   </Link>
                 </div>
-                {/* Scroll hint */}
+
+                {/* NEW Help button under CTAs */}
+                <Link
+                  href="/help"
+                  onClick={() => setOpen(false)}
+                  className="mt-2 block w-full rounded-xl border border-white/12 bg-white/5 px-4 py-2 text-center text-sm font-semibold text-yellow-200 hover:bg-white/10 active:scale-[0.99]"
+                >
+                  Help
+                </Link>
+
                 <div className="pointer-events-none mt-3 h-6 bg-gradient-to-t from-[#120626]/95 to-transparent rounded-b-2xl" />
               </div>
             </div>
@@ -256,83 +265,67 @@ export default function MobileSidebar({
         </div>
       )}
 
-      {/* Keyframes */}
       <style jsx>{`
-        @keyframes slideIn { from { transform: translateX(-8%); opacity: 0.6; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideIn {
+          from { transform: translateX(-8%); opacity: 0.6; }
+          to { transform: translateX(0); opacity: 1; }
+        }
       `}</style>
     </div>
   );
 }
 
-// ---------------- Icons (20px, duotone-friendly) ----------------
-function IconHome() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 10.5 12 4l8 6.5V20a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2v-9.5Z" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-    </svg>
-  );
-}
-function IconChart() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M4 20h16M7 17V9m5 8V5m5 12v-6" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-    </svg>
-  );
-}
-function IconTrophy() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 5h12v2a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V5Zm1 16h10M9 19h6" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-      <path d="M18 7h2a2 2 0 0 1-2 2M6 7H4a2 2 0 0 0 2 2" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
-    </svg>
-  );
-}
-function IconUser() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-      <path d="M5 19.5c1.5-3 4.5-4.5 7-4.5s5.5 1.5 7 4.5" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
-    </svg>
-  );
-}
-function IconUsers() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-      <path d="M3.5 18c1.2-2.6 3.6-3.9 5.5-3.9s4.3 1.3 5.5 3.9" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
-      <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.4" opacity="0.6"/>
-    </svg>
-  );
-}
-function IconController() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="3" y="10" width="18" height="7" rx="3.5" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-      <path d="M8 13.5h3M9.5 12v3" stroke="currentColor" strokeWidth="1.6"/>
-      <circle cx="16.5" cy="13.5" r="1" fill="currentColor" opacity="0.8"/>
-      <circle cx="18.8" cy="12.8" r=".7" fill="currentColor" opacity="0.6"/>
-    </svg>
-  );
-}
-function IconBook() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 5h9a3 3 0 0 1 3 3v12H7a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
-      <path d="M6 8h12" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
-    </svg>
-  );
-}
-function IconChevron() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
-  );
-}
-function IconClose() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
+// ---------------- Icons ----------------
+function IconHome() { /* unchanged */ return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 10.5 12 4l8 6.5V20a2 2 0 0 1-2 2h-4v-6H10v6H6a2 2 0 0 1-2-2v-9.5Z" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+  </svg>
+);}
+function IconChart() { return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M4 20h16M7 17V9m5 8V5m5 12v-6" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+  </svg>
+);}
+function IconTrophy() { return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 5h12v2a5 5 0 0 1-5 5h-2a5 5 0 0 1-5-5V5Zm1 16h10M9 19h6" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+    <path d="M18 7h2a2 2 0 0 1-2 2M6 7H4a2 2 0 0 0 2 2" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
+  </svg>
+);}
+function IconUser() { return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="12" cy="8" r="3.5" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+    <path d="M5 19.5c1.5-3 4.5-4.5 7-4.5s5.5 1.5 7 4.5" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
+  </svg>
+);}
+function IconUsers() { return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="9" cy="8.5" r="3" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+    <path d="M3.5 18c1.2-2.6 3.6-3.9 5.5-3.9s4.3 1.3 5.5 3.9" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
+    <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.4" opacity="0.6"/>
+  </svg>
+);}
+function IconController() { return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="10" width="18" height="7" rx="3.5" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+    <path d="M8 13.5h3M9.5 12v3" stroke="currentColor" strokeWidth="1.6"/>
+    <circle cx="16.5" cy="13.5" r="1" fill="currentColor" opacity="0.8"/>
+    <circle cx="18.8" cy="12.8" r=".7" fill="currentColor" opacity="0.6"/>
+  </svg>
+);}
+function IconBook() { return (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 5h9a3 3 0 0 1 3 3v12H7a3 3 0 0 1-3-3V8a3 3 0 0 1 3-3Z" stroke="currentColor" strokeWidth="1.6" opacity="0.95"/>
+    <path d="M6 8h12" stroke="currentColor" strokeWidth="1.6" opacity="0.6"/>
+  </svg>
+);}
+function IconChevron() { return (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M9 6l6 6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>
+);}
+function IconClose() { return (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);}
