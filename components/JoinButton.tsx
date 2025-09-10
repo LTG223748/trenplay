@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import {
+  doc,
+  getDoc,
+  runTransaction,      // 👈 added
+  serverTimestamp,     // 👈 added
+  Timestamp,           // 👈 added
+} from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 
 import {
@@ -38,6 +44,7 @@ interface Match {
   matchState?: string | null;
   escrowAuthority?: string | null;
   escrowToken?: string | null;
+  // optional: expireAt?: any; // Firestore Timestamp/number/string
 }
 
 interface JoinButtonProps {
@@ -56,6 +63,20 @@ function safePk(
     return { ok: false, err: `${label} is not a valid PublicKey.` };
   }
 }
+
+// helpers for expireAt
+const MIN = 60_000;
+const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
+const toMillis = (t: any): number | null => {
+  if (t == null) return null;
+  if (typeof t === 'number') return t;
+  if (typeof t === 'string') {
+    const v = Date.parse(t);
+    return Number.isNaN(v) ? null : v;
+  }
+  if (typeof t?.toMillis === 'function') return t.toMillis();
+  return null;
+};
 
 export default function JoinButton({ match }: JoinButtonProps) {
   const [loading, setLoading] = useState(false);
@@ -112,17 +133,18 @@ export default function JoinButton({ match }: JoinButtonProps) {
     const connection = new Connection(RPC_URL, 'confirmed');
 
     try {
-      // Refresh match doc
+      // 0) Quick re-check before spending any gas/fees
       const matchRef = doc(db, 'matches', match.id);
       const snap = await getDoc(matchRef);
-      const fresh = snap.data() as Match | undefined;
+      const fresh = snap.data() as any;
       if (!fresh) throw new Error('Match not found.');
-      if ((fresh.status ?? 'open') !== 'open') throw new Error('Match is no longer open.');
+      if ((fresh.status ?? 'open').toLowerCase() !== 'open') throw new Error('Match is no longer open.');
       if (fresh.joinerUserId) throw new Error('Match already joined.');
+      const expMs = toMillis(fresh?.expireAt);
+      if (expMs && expMs <= Date.now()) throw new Error('This match has expired.');
 
+      // 1) On-chain join
       const program = getTrenbetProgram(connection, anchorWallet);
-      console.log('[JoinMatch] Program ID:', program.programId.toBase58());
-
       const matchStatePk = matchStateCheck.pk!;
       const escrowAuthorityPk = escrowAuthCheck.pk!;
       const escrowTokenPk = escrowTokCheck.pk!;
@@ -147,10 +169,9 @@ export default function JoinButton({ match }: JoinButtonProps) {
         );
         const tx = new Transaction().add(ix);
         await program.provider.sendAndConfirm!(tx, []);
-        console.log('✅ Created player2 ATA:', player2Ata.toBase58());
       }
 
-      // Quick balance check
+      // Balance check
       const parsed = await connection.getParsedAccountInfo(player2Ata);
       const uiAmt =
         (parsed.value as any)?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0;
@@ -173,18 +194,34 @@ export default function JoinButton({ match }: JoinButtonProps) {
         })
         .rpc();
 
-      await updateDoc(matchRef, {
-        joinerUserId: user!.uid,
-        status: 'pending',
-        updatedAt: new Date().toISOString(),
+      // 2) Firestore: atomically mark as pending and set 5-min expiry
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, 'matches', match.id);
+        const snap2 = await tx.get(ref);
+        if (!snap2.exists()) throw new Error('Match not found (post-chain).');
+
+        const m = snap2.data() as any;
+        const now = Date.now();
+        const exp2 = toMillis(m?.expireAt);
+
+        if ((m.status ?? 'open').toLowerCase() !== 'open') throw new Error('Match is no longer open.');
+        if (m.joinerUserId) throw new Error('Someone already joined.');
+        if (exp2 && exp2 <= now) throw new Error('This match has expired.');
+
+        tx.update(ref, {
+          status: 'pending',
+          joinerUserId: user!.uid,
+          joinerJoinedAt: serverTimestamp(),
+          expireAt: tsPlus(5 * MIN), // 🔑 vanish if abandoned in ~5 min
+          updatedAt: serverTimestamp(),
+        });
       });
 
       alert('✅ Joined match and deposited coins!');
       window.location.href = `/match/${match.id}/chat`;
     } catch (err: any) {
       console.error('JOIN ERROR:', err);
-      const msg =
-        err?.message ?? 'Failed to join match. See console for details.';
+      const msg = err?.message ?? 'Failed to join match. See console for details.';
       alert(`❌ ${msg}`);
     } finally {
       setLoading(false);
@@ -223,9 +260,6 @@ export default function JoinButton({ match }: JoinButtonProps) {
     </div>
   );
 }
-
-
-
 
 
 

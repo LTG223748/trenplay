@@ -11,6 +11,8 @@ import {
   doc,
   getDoc,
   setDoc,
+  updateDoc,          // 👈 added
+  Timestamp,          // 👈 added
 } from "firebase/firestore";
 import { db, auth } from "../lib/firebase";
 import notify from "../lib/notify";
@@ -32,6 +34,7 @@ type MatchDoc = {
   creatorUserId: string;
   joinerUserId?: string | null;
   status?: string;
+  expireAt?: any; // 👈 may be Timestamp | number | string | null
 };
 
 type PlayerCard = {
@@ -41,6 +44,20 @@ type PlayerCard = {
   confirmed?: boolean;
   confirmedAt?: any;
   selectionLocked?: boolean;
+};
+
+// ===== Expiry helpers =====
+const MIN_MS = 60_000;
+const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
+const toMillis = (t: any): number | null => {
+  if (t == null) return null;
+  if (typeof t === "number") return t;
+  if (typeof t === "string") {
+    const v = Date.parse(t);
+    return Number.isNaN(v) ? null : v;
+  }
+  if (typeof t?.toMillis === "function") return t.toMillis();
+  return null;
 };
 
 export default function MatchChat({ matchId }: MatchChatProps) {
@@ -61,6 +78,9 @@ export default function MatchChat({ matchId }: MatchChatProps) {
   const [profileTag, setProfileTag] = useState("");
   const [username, setUsername] = useState<string>("Player");
   const [confirming, setConfirming] = useState(false);
+
+  // presence tracking
+  const [oppLastSeenMs, setOppLastSeenMs] = useState<number | null>(null);
 
   // autosave state
   const [autoSaving, setAutoSaving] = useState(false);
@@ -126,6 +146,74 @@ export default function MatchChat({ matchId }: MatchChatProps) {
     return () => unsub();
   }, [matchId]);
 
+  // ===== Presence: write my heartbeat while pending =====
+  useEffect(() => {
+    if (!myUid || !match?.id || match.status !== "pending") return;
+    const myPresRef = doc(db, "matches", match.id, "presence", myUid);
+
+    // write immediately, then every 45s
+    setDoc(myPresRef, { lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
+    const id = setInterval(() => {
+      setDoc(myPresRef, { lastSeen: serverTimestamp() }, { merge: true }).catch(() => {});
+    }, 45_000);
+
+    return () => clearInterval(id);
+  }, [myUid, match?.id, match?.status]);
+
+  // ===== Presence: watch opponent heartbeat =====
+  useEffect(() => {
+    if (!opponentUid || !match?.id || match.status !== "pending") {
+      setOppLastSeenMs(null);
+      return;
+    }
+    const oppRef = doc(db, "matches", match.id, "presence", opponentUid);
+    const unsub = onSnapshot(oppRef, (snap) => {
+      const d = snap.data() as any;
+      const ts = d?.lastSeen;
+      const ms = toMillis(ts);
+      setOppLastSeenMs(ms);
+    });
+    return () => unsub();
+  }, [opponentUid, match?.id, match?.status]);
+
+  // ===== Ensure a pending expiry exists (safety if join flow didn't set it) =====
+  useEffect(() => {
+    if (!match?.id || match.status !== "pending") return;
+    const ms = toMillis(match.expireAt);
+    if (!ms || ms <= Date.now()) {
+      updateDoc(doc(db, "matches", match.id), { expireAt: tsPlus(5 * MIN_MS) }).catch(() => {});
+    }
+  }, [match?.id, match?.status, match?.expireAt]);
+
+  // ===== Only keep room alive while BOTH are present =====
+  useEffect(() => {
+    if (!match?.id || match.status !== "pending") return;
+
+    const bumpIfBothHere = async () => {
+      // consider opponent "fresh" if seen in last 90s
+      const bothHere = !!oppLastSeenMs && Date.now() - oppLastSeenMs < 90_000;
+      if (bothHere) {
+        await updateDoc(doc(db, "matches", match.id!), { expireAt: tsPlus(5 * MIN_MS) }).catch(
+          () => {}
+        );
+      }
+    };
+
+    // bump every 60s
+    const id = setInterval(bumpIfBothHere, 60_000);
+    // and try once on mount
+    bumpIfBothHere();
+    return () => clearInterval(id);
+  }, [match?.id, match?.status, oppLastSeenMs]);
+
+  // ===== Auto-activate when both confirmed (clears expiry) =====
+  useEffect(() => {
+    if (!match?.id) return;
+    if (match.status === "pending" && bothConfirmed && !oppChangedAfterMyConfirm) {
+      updateDoc(doc(db, "matches", match.id), { status: "active", expireAt: null }).catch(() => {});
+    }
+  }, [match?.id, match?.status, bothConfirmed, oppChangedAfterMyConfirm]);
+
   // ===== Subscribe to my player card =====
   useEffect(() => {
     if (!myUid || !matchId) return;
@@ -134,12 +222,13 @@ export default function MatchChat({ matchId }: MatchChatProps) {
       const data = (snap.data() as PlayerCard) || {};
       setMe(data);
       // hydrate inputs but don't fight user typing
-      if (data.team !== undefined && !locked) setMyTeam((cur) => cur || data.team || "");
-      if (data.gamertag !== undefined && !locked) setMyTag((cur) => cur || data.gamertag || "");
+      const lockedLocal = !!(data.selectionLocked ?? data.confirmed);
+      if (data.team !== undefined && !lockedLocal) setMyTeam((cur) => cur || data.team || "");
+      if (data.gamertag !== undefined && !lockedLocal) setMyTag((cur) => cur || data.gamertag || "");
     });
     return () => unsub();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myUid, matchId, locked]);
+  }, [myUid, matchId]);
 
   // ===== Pull profile gamertag and prefill once if empty =====
   useEffect(() => {
@@ -490,4 +579,3 @@ export default function MatchChat({ matchId }: MatchChatProps) {
     </div>
   );
 }
-

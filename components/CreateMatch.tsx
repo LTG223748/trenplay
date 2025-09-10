@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { addDoc, collection, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { addDoc, collection, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore'; // ← added Timestamp
 import { db, auth } from '../lib/firebase';
 
 import { useWallet, useAnchorWallet } from '@solana/wallet-adapter-react';
@@ -54,6 +54,11 @@ const games = [
 
 // === HARD WIRES (devnet) ===
 const HARDCODED_PLAYER1_ATA = new PublicKey('CRFQewYNA3DVyFqEEH1kUtyiZhEi2RTtC8enSw5T48VG');
+
+// 🔑 Small helper for “expires in X minutes” timestamps
+const MIN_MS = 60_000;
+const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
+const OPEN_TTL_MIN = 30; // open matches live for 30 minutes
 
 function CreateMatchPage() {
   const { publicKey, connected } = useWallet();
@@ -191,6 +196,9 @@ function CreateMatchPage() {
         matchState: matchState.toBase58(),
         escrowAuthority: escrowAuthority.toBase58(),
         escrowToken: escrowToken.toBase58(),
+
+        // 🔑 NEW: make open matches disappear from the UI after 30 minutes
+        expireAt: tsPlus(OPEN_TTL_MIN * MIN_MS),
       });
 
       notify('✅ Match created on-chain and saved!', 'success');
@@ -309,10 +317,6 @@ function CreateMatchPage() {
 }
 
 export default CreateMatchPage;
-
-
-
-
 
 
 

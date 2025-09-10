@@ -1,10 +1,21 @@
-// components/MatchCard.tsx
+'use client';
+
 import React, { useMemo, useState } from "react";
 import Link from "next/link";
-import JoinButton from "./JoinButton";
+import { useRouter } from "next/navigation";
 import { formatTCWithUSD } from "../utils/formatCurrency";
 import { GAMES, TrenGameId } from "../lib/games";
 import MatchClaimNoShowButton from "./MatchClaimNoShowButton";
+import notify from "../lib/notify";
+
+// Firestore bits
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 type FireTime = Date | number | string | { toMillis?: () => number };
 
@@ -20,7 +31,7 @@ type Match = {
   entryFee: number;
 
   // status fields
-  status: string;                // "open" | "full" | "completed_*" | etc.
+  status: string;                // "open" | "full" | "pending" | "completed_*" | "closed" | etc.
   completed?: boolean;
   winnerUid?: string | null;
 
@@ -78,16 +89,32 @@ function toMs(v?: FireTime): number {
   return NaN as unknown as number;
 }
 
+// ⏳ helpers for expiry
+const MIN = 60_000;
+const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
+function toMillisAny(t: any): number | null {
+  if (!t) return null;
+  if (typeof t === "number") return t;
+  if (typeof t === "string") {
+    const v = Date.parse(t);
+    return Number.isNaN(v) ? null : v;
+  }
+  if (typeof t?.toMillis === "function") return t.toMillis();
+  return null;
+}
+
 export default function MatchCard({ match, currentUser }: MatchCardProps) {
   const [local, setLocal] = useState<Match>(match);
+  const [joining, setJoining] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const router = useRouter();
 
   const isFull = Boolean(local.joinerUserId) || local.status === "full";
   const isCreator = !!currentUser?.uid && currentUser.uid === local.creatorUserId;
   const youUid = currentUser?.uid ?? "";
   const youAreParticipant = !!youUid && (youUid === local.creatorUserId || youUid === local.joinerUserId);
 
-  // Resolve game label/icon from single source of truth (lib/games.ts).
-  // Falls back to `match.game` if you haven’t migrated older docs yet.
+  // Resolve game label/icon
   const gameMeta = local.gameId ? GAMES[local.gameId] : undefined;
   const gameLabel = gameMeta?.label ?? local.game ?? "Unknown Game";
   const gameIcon = gameMeta?.icon ?? "🎮";
@@ -97,6 +124,95 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
   const winnerUid = local.winnerUid ?? undefined;
 
   const schedMs = useMemo(() => toMs(local.scheduledAt), [local.scheduledAt]);
+
+  // 🟡 JOIN: set pending + 5-minute expiry in a transaction
+  async function handleJoin() {
+    if (!currentUser?.uid) {
+      notify("Please log in to join.", "error");
+      return;
+    }
+    if (isCreator) {
+      notify("You cannot join your own match.", "error");
+      return;
+    }
+    setJoining(true);
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "matches", local.id);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error("Match not found");
+
+        const m = snap.data() as any;
+        const expMs = toMillisAny(m?.expireAt);
+        const now = Date.now();
+
+        if ((m.status ?? "").toLowerCase() !== "open") throw new Error("Match is no longer open.");
+        if (m.joinerUserId) throw new Error("Someone already joined.");
+        if (expMs && expMs <= now) throw new Error("This match has expired.");
+        if (m.creatorUserId === currentUser.uid) throw new Error("You cannot join your own match.");
+
+        tx.update(ref, {
+          status: "pending",
+          joinerUserId: currentUser.uid,
+          joinerJoinedAt: serverTimestamp(),
+          expireAt: tsPlus(5 * MIN), // 🔑 vanish if abandoned
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      setLocal((prev) => ({
+        ...prev,
+        status: "pending",
+        joinerUserId: currentUser!.uid,
+      }));
+
+      notify("Joined match — taking you to chat…", "success");
+      router.push(`/match/${local.id}/chat`);
+    } catch (e: any) {
+      console.error(e);
+      notify(e?.message || "Failed to join. Try refreshing.", "error");
+    } finally {
+      setJoining(false);
+    }
+  }
+
+  // 🔴 CANCEL (Creator only, when open): closes immediately with a short expireAt
+  async function handleCancel() {
+    if (!isCreator) return;
+    if (local.status !== "open") {
+      notify("You can only cancel before anyone joins.", "error");
+      return;
+    }
+    if (!window.confirm("Cancel this match?")) return;
+
+    setCancelling(true);
+    try {
+      await runTransaction(db, async (tx) => {
+        const ref = doc(db, "matches", local.id);
+        const snap = await tx.get(ref);
+        if (!snap.exists()) throw new Error("Match not found");
+
+        const m = snap.data() as any;
+        if ((m.status ?? "").toLowerCase() !== "open" || m.joinerUserId) {
+          throw new Error("Match is no longer open.");
+        }
+
+        tx.update(ref, {
+          status: "closed",
+          expireAt: tsPlus(60_000), // optional: hide everywhere soon
+          updatedAt: serverTimestamp(),
+        });
+      });
+
+      setLocal((prev) => ({ ...prev, status: "closed" }));
+      notify("Match cancelled.", "success");
+    } catch (e: any) {
+      console.error(e);
+      notify(e?.message || "Failed to cancel.", "error");
+    } finally {
+      setCancelling(false);
+    }
+  }
 
   return (
     <div
@@ -130,7 +246,7 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
         </span>
       </div>
 
-      {/* Status chip (Completed / Open / Full) */}
+      {/* Status chip (Completed / Open / Full / Pending / Closed) */}
       <div className="mb-2">
         {completed ? (
           <span className="inline-flex items-center rounded bg-green-500/15 px-2 py-0.5 font-semibold text-green-300 text-xs">
@@ -139,6 +255,14 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
         ) : isFull ? (
           <span className="inline-flex items-center rounded bg-red-500/15 px-2 py-0.5 font-semibold text-red-300 text-xs">
             Full
+          </span>
+        ) : local.status === "pending" ? (
+          <span className="inline-flex items-center rounded bg-amber-500/15 px-2 py-0.5 font-semibold text-amber-300 text-xs">
+            Pending
+          </span>
+        ) : local.status === "closed" ? (
+          <span className="inline-flex items-center rounded bg-gray-500/15 px-2 py-0.5 font-semibold text-gray-300 text-xs">
+            Closed
           </span>
         ) : (
           <span className="inline-flex items-center rounded bg-emerald-500/15 px-2 py-0.5 font-semibold text-emerald-300 text-xs">
@@ -161,8 +285,28 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
 
       {/* Actions */}
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        {/* Join (non-creator, not full, not completed) */}
-        {!isCreator && !isFull && !completed && <JoinButton match={local as any} />}
+        {/* Join (non-creator, not full, not completed, not pending/closed) */}
+        {!isCreator && !isFull && !completed && local.status === "open" && (
+          <button
+            onClick={handleJoin}
+            disabled={joining}
+            className="px-4 py-2 rounded-xl font-bold bg-yellow-400 text-black hover:bg-yellow-500 disabled:opacity-50"
+          >
+            {joining ? "Joining…" : "Join"}
+          </button>
+        )}
+
+        {/* Cancel (creator only, open) */}
+        {isCreator && !completed && local.status === "open" && (
+          <button
+            onClick={handleCancel}
+            disabled={cancelling}
+            className="px-4 py-2 rounded-xl font-bold bg-red-500 text-white hover:bg-red-400 disabled:opacity-50"
+            title="Cancel this match"
+          >
+            {cancelling ? "Cancelling…" : "Cancel"}
+          </button>
+        )}
 
         {/* Creator notice when someone joins */}
         {isCreator && !!local.joinerUserId && !completed && (
@@ -200,14 +344,3 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

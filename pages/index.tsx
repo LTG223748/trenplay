@@ -22,6 +22,21 @@ const DivisionFlanks = dynamic(() => import('../components/DivisionFlanks'), { s
 const MatchGrid = dynamic(() => import('../components/MatchGrid'), { ssr: false });
 const GameFilterBar = dynamic(() => import('../components/GameFilterBar'), { ssr: false });
 
+// ---------- helpers for home feed cleanup ----------
+const toMillis = (t: any) =>
+  t?.toMillis?.() ?? (typeof t === 'number' ? t : typeof t === 'string' ? Date.parse(t) : null);
+
+// treat legacy docs with no expireAt as dead if older than 2h
+const isAlive = (m: any) => {
+  const exp = toMillis(m?.expireAt);
+  if (typeof exp === 'number') return exp > Date.now();
+  const created = toMillis(m?.createdAt);
+  return created ? Date.now() - created < 2 * 60 * 60 * 1000 : false;
+};
+
+// only show joinable-ish statuses on the home feed
+const ALLOWED = new Set(['open', 'pending', 'active']);
+
 export default function HomePage() {
   const [user, loading, error] = useAuthState(auth);
 
@@ -59,13 +74,18 @@ export default function HomePage() {
     })();
   }, [mounted, user]);
 
-  // Load matches
+  // Load matches (then clean)
   useEffect(() => {
     if (!mounted) return;
     (async () => {
       const snap = await getDocs(collection(db, 'matches'));
-      const allMatches = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
-      setMatches(allMatches);
+      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+
+      const cleaned = all
+        .filter((m) => ALLOWED.has((m.status ?? '').toLowerCase()))
+        .filter(isAlive);
+
+      setMatches(cleaned);
     })();
   }, [mounted]);
 
@@ -88,9 +108,15 @@ export default function HomePage() {
     rocket_league: ['rocketleague', 'rl', 'rocket', 'carball'],
   };
 
+  // Apply category + alive filter (defensive in case matches updates elsewhere)
   const filteredMatches = useMemo(() => {
-    if (activeGame === 'all') return matches;
-    return matches.filter((m: any) => {
+    const base = matches
+      .filter((m: any) => ALLOWED.has((m.status ?? '').toLowerCase()))
+      .filter(isAlive);
+
+    if (activeGame === 'all') return base;
+
+    return base.filter((m: any) => {
       const gameField = m.game ?? m.title ?? '';
       const g = norm(gameField);
       const key = norm(activeGame);
