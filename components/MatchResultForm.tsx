@@ -1,80 +1,89 @@
+'use client';
+
 import React, { useState } from 'react';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, runTransaction, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { evaluateMatchOutcome } from '../utils/evaluateMatchOutcome';
-import notify from '../lib/notify'; // Make sure this path is correct!
+import notify from '../lib/notify';
+
+type Role = 'creator' | 'joiner';
+type Outcome = 'win' | 'loss' | 'draw' | 'backed_out';
 
 interface Props {
   matchId: string;
-  userRole: 'creator' | 'joiner';
+  userRole: Role;
 }
 
 export default function MatchResultForm({ matchId, userRole }: Props) {
   const [submitted, setSubmitted] = useState(false);
-  const [selectedWinner, setSelectedWinner] = useState<'creator' | 'joiner' | 'tie' | ''>('');
+  const [outcome, setOutcome] = useState<Outcome | ''>('');
+  const [sending, setSending] = useState(false);
 
   const handleSubmit = async () => {
-    if (!selectedWinner) {
-      notify('Please select who won the match.', 'error');
+    if (!outcome) {
+      notify('Please select your result.', 'error');
       return;
     }
 
     try {
-      const matchRef = doc(db, 'matches', matchId);
-      const snap = await getDoc(matchRef);
-      const existing = snap.data();
+      setSending(true);
 
-      // Update the winnerSubmitted field
-      const updatedWinnerSubmitted = {
-        ...existing?.winnerSubmitted,
-        [userRole]: selectedWinner,
-      };
+      const mref = doc(db, 'matches', matchId);
 
-      await updateDoc(matchRef, {
-        winnerSubmitted: updatedWinnerSubmitted,
-        status: 'awaiting-results',
+      // Write this player's report atomically (avoids race if both submit together)
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(mref);
+        if (!snap.exists()) throw new Error('Match not found');
+
+        const pathBase = `reports.${userRole}`;
+        tx.update(mref, {
+          [`${pathBase}.outcome`]: outcome,
+          [`${pathBase}.submittedAt`]: serverTimestamp(),
+          // While waiting on the other player, keep it active but mark awaiting
+          status: 'awaiting-results',
+        } as any);
       });
 
-      // Evaluate outcome automatically
+      // Try to finalize if both sides have reported
       await evaluateMatchOutcome(matchId);
 
       setSubmitted(true);
-      notify('✅ Match result submitted! Waiting for admin or system to confirm winner.', 'success');
+      notify('✅ Result submitted! Waiting for the other player / system to finalize.', 'success');
     } catch (err: any) {
       notify('❌ Failed to submit result: ' + (err?.message || 'Unknown error'), 'error');
+    } finally {
+      setSending(false);
     }
   };
 
   return (
     <div className="bg-[#1c1c2e] p-4 rounded-lg text-white">
       {submitted ? (
-        <p className="text-green-400 font-bold">✅ Match result submitted!</p>
+        <p className="text-green-400 font-bold">✅ Result submitted! You can close this.</p>
       ) : (
         <>
-          <label className="block mb-2 font-semibold">Who won the match?</label>
+          <label className="block mb-2 font-semibold">My result</label>
           <select
-            value={selectedWinner}
-            onChange={(e) => setSelectedWinner(e.target.value as any)}
+            value={outcome}
+            onChange={(e) => setOutcome(e.target.value as Outcome)}
             className="w-full p-2 rounded bg-[#2c2c4f] text-white mb-4"
           >
-            <option value="">-- Select Winner --</option>
-            <option value="creator">Creator</option>
-            <option value="joiner">Joiner</option>
-            <option value="tie">Tie</option>
+            <option value="">-- Select --</option>
+            <option value="win">I won</option>
+            <option value="loss">I lost</option>
+            <option value="draw">Tie</option>
+            <option value="backed_out">I backed out</option>
           </select>
 
           <button
             onClick={handleSubmit}
-            className="bg-blue-600 hover:bg-blue-500 px-4 py-2 rounded font-bold"
+            disabled={!outcome || sending}
+            className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 px-4 py-2 rounded font-bold"
           >
-            Submit Result
+            {sending ? 'Submitting...' : 'Submit Result'}
           </button>
         </>
       )}
     </div>
   );
 }
-
-
-
-

@@ -1,71 +1,102 @@
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, increment } from 'firebase/firestore';
-import { updateUserDivisionAndElo } from '../utils/eloDivision'; // <-- new import
+import {
+  doc,
+  runTransaction,
+  serverTimestamp,
+  increment,
+} from 'firebase/firestore';
+import { updateUserDivisionAndElo } from '../utils/eloDivision';
+
+type WinnerVote = 'creator' | 'joiner' | 'tie' | 'backed_out' | 'null' | undefined;
 
 export async function evaluateMatchOutcome(matchId: string) {
   const matchRef = doc(db, 'matches', matchId);
-  const snap = await getDoc(matchRef);
-  const data = snap.data();
 
-  if (!data || !data.winnerSubmitted) return;
+  // Do it atomically so simultaneous submissions don't fight
+  const meta = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(matchRef);
+    if (!snap.exists()) return null;
 
-  const { creator, joiner } = data.winnerSubmitted;
+    const data = snap.data() as any;
+    const ws = (data?.winnerSubmitted ?? {}) as { creator?: WinnerVote; joiner?: WinnerVote };
+    const creator = ws.creator;
+    const joiner = ws.joiner;
 
-  if (!creator || !joiner || creator === 'null' || joiner === 'null') return;
-
-  // If both agree on "tie", send to admin for review (or handle as you wish)
-  if (creator === joiner && creator === 'tie') {
-    await updateDoc(matchRef, {
-      status: 'disputed',
-      winner: 'tie',
-      completedAt: new Date(),
-    });
-    console.log(`⚠️ Both called tie, admin review needed.`);
-    return;
-  }
-
-  // If both agree on winner
-  if (creator === joiner) {
-    const winnerKey = creator; // "creator" or "joiner"
-    const loserKey = winnerKey === 'creator' ? 'joiner' : 'creator';
-
-    const winnerUserId = data[`${winnerKey}UserId`];
-    const loserUserId = data[`${loserKey}UserId`];
-    const payout = data.entryFee * 2;
-
-    // Update winner's balance
-    if (winnerUserId) {
-      const userRef = doc(db, 'users', winnerUserId);
-      await updateDoc(userRef, {
-        balance: increment(payout),
-      });
+    // If either side hasn't submitted yet, keep waiting
+    if (!creator || !joiner || creator === 'null' || joiner === 'null') {
+      if ((data.status ?? '') !== 'awaiting-results') {
+        tx.update(matchRef, { status: 'awaiting-results' });
+      }
+      return null;
     }
 
-    // 🔥 ELO & Division update for both players!
-    if (winnerUserId) {
-      await updateUserDivisionAndElo(winnerUserId, true); // winner gets +25
-    }
-    if (loserUserId) {
-      await updateUserDivisionAndElo(loserUserId, false); // loser gets -20
+    // Already in a terminal state / archived
+    const statusLower = String(data.status || '').toLowerCase();
+    if (data.active === false || ['completed', 'cancelled', 'expired', 'disputed'].includes(statusLower)) {
+      return null;
     }
 
-    // Mark match as completed
-    await updateDoc(matchRef, {
-      status: 'completed',
-      winner: winnerKey,
-      winnerUserId: winnerUserId,
-      completedAt: new Date(),
-    });
-    console.log(`✅ Winner agreed: ${winnerKey} (${winnerUserId}) gets ${payout} TC`);
-  } else {
-    // Disagreement = dispute
-    await updateDoc(matchRef, {
-      status: 'disputed',
-    });
-    console.log(`⚠️ Match disputed between users.`);
+    // Decide outcome
+    let newStatus: 'completed' | 'cancelled' | 'disputed' = 'disputed';
+    let winnerKey: 'creator' | 'joiner' | null = null;
+    let result: 'draw' | null = null;
+
+    const bothBacked = creator === 'backed_out' && joiner === 'backed_out';
+    const bothTie = creator === 'tie' && joiner === 'tie';
+    const bothSayCreator = creator === 'creator' && joiner === 'creator';
+    const bothSayJoiner  = creator === 'joiner'  && joiner === 'joiner';
+
+    if (bothBacked) {
+      newStatus = 'cancelled';
+    } else if (bothTie) {
+      // Your preference earlier was admin review for ties; still archive so cards disappear
+      newStatus = 'disputed';
+      result = 'draw';
+    } else if (bothSayCreator || bothSayJoiner) {
+      newStatus = 'completed';
+      winnerKey = bothSayCreator ? 'creator' : 'joiner';
+    } else {
+      // Any disagreement (e.g., creator vs joiner, tie vs winner) → disputed
+      newStatus = 'disputed';
+    }
+
+    // Prepare match updates (always archive from user grid)
+    const updates: any = {
+      status: newStatus,
+      active: false,                        // <-- hides from MatchGrid immediately
+      archivedAt: serverTimestamp(),
+    };
+    if (result) updates.result = result;
+
+    let winnerUserId: string | null = null;
+    let loserUserId: string | null = null;
+
+    if (winnerKey) {
+      const loserKey = winnerKey === 'creator' ? 'joiner' : 'creator';
+      winnerUserId = data[`${winnerKey}UserId`] || null;
+      loserUserId  = data[`${loserKey}UserId`]  || null;
+
+      updates.winner = winnerKey;
+      updates.winnerUserId = winnerUserId;
+      updates.completedAt = serverTimestamp();
+
+      // Payout winner from escrow pool (entryFee * 2)
+      const payout = Number(data.entryFee) * 2 || 0;
+      if (winnerUserId && payout > 0) {
+        const userRef = doc(db, 'users', winnerUserId);
+        tx.update(userRef, { balance: increment(payout) });
+      }
+    }
+
+    tx.update(matchRef, updates);
+
+    // Return info for post-transaction ELO updates
+    return { newStatus, winnerUserId, loserUserId };
+  });
+
+  // Update ELO/division after the transaction to avoid nested writes in tx
+  if (meta && meta.newStatus === 'completed') {
+    if (meta.winnerUserId) await updateUserDivisionAndElo(meta.winnerUserId, true);
+    if (meta.loserUserId)  await updateUserDivisionAndElo(meta.loserUserId, false);
   }
 }
-
-
-
-

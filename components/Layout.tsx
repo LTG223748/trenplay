@@ -6,11 +6,12 @@ import { usePathname } from 'next/navigation';
 import SidebarNav from './SidebarNav';
 import Header from './Header';
 import MobileHeader from '@/components/MobileHeader';
-import MobileSidebar from '@/components/MobileSidebar'; // 👈 added
+import MobileSidebar from '@/components/MobileSidebar';
 import MobileSignUp from '@/components/MobileSignUp';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../lib/firebase';
+import JoinedMatchWatcher from '@/components/JoinedMatchWatcher'; // 👈 add this
 
 interface LayoutProps {
   tc?: number;
@@ -90,6 +91,9 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
 
       {/* Mobile sticky Join/Login bar (only when logged out) */}
       {!user && <MobileSignUp />}
+
+      {/* 👇 mount ONE watcher globally so we don't get duplicate popups */}
+      <JoinedMatchWatcher />
     </div>
   );
 };
