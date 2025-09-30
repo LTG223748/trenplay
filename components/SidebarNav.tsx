@@ -11,7 +11,7 @@ import {
   FaQuestionCircle,
   FaShieldAlt,
   FaBookOpen,
-  FaGift,           // 🎁 for Refer
+  FaGift, // 🎁 for Refer
 } from 'react-icons/fa';
 
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -23,17 +23,17 @@ import { useSidebar } from '../context/SidebarContext';
 const COLLAPSED_WIDTH = 40;
 const EXPANDED_WIDTH = 224;
 
-// ✅ Nav links updated
+// ✅ Nav links updated with IDs for onboarding tour
 const navLinks = [
-  { href: '/app', label: 'Home', icon: <FaHome /> },
-  { href: '/leaderboard', label: 'Leaderboard', icon: <FaChartBar /> },
-  { href: '/tournaments', label: 'Tournaments', icon: <FaTrophy /> },
-  { href: '/profile', label: 'Profile', icon: <FaUser /> },
-  { href: '/matches', label: 'Matches', icon: <FaGamepad /> },
-  { href: '/friends', label: 'Friends', icon: <FaUsers /> },   // 👥 Friends list
-  { href: '/refer', label: 'Refer', icon: <FaGift /> },        // 🎁 Referral program
-  { href: '/howto', label: 'How To Use', icon: <FaBookOpen /> },
-  { href: '/help', label: 'Help', icon: <FaQuestionCircle /> },
+  { id: 'nav-home', href: '/app', label: 'Home', icon: <FaHome /> },
+  { id: 'nav-leaderboard', href: '/leaderboard', label: 'Leaderboard', icon: <FaChartBar /> },
+  { id: 'nav-tournaments', href: '/tournaments', label: 'Tournaments', icon: <FaTrophy /> },
+  { id: 'nav-profile', href: '/profile', label: 'Profile', icon: <FaUser /> },
+  { id: 'nav-matches', href: '/matches', label: 'Matches', icon: <FaGamepad /> },
+  { id: 'nav-friends', href: '/friends', label: 'Friends', icon: <FaUsers /> }, // 👥 Friends list
+  { id: 'nav-refer', href: '/refer', label: 'Refer', icon: <FaGift /> }, // 🎁 Referral program
+  { id: 'nav-howto', href: '/howto', label: 'How To Use', icon: <FaBookOpen /> },
+  { id: 'nav-help', href: '/help', label: 'Help', icon: <FaQuestionCircle /> },
 ];
 
 const SidebarNav: React.FC = () => {
@@ -52,7 +52,7 @@ const SidebarNav: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-    getDoc(doc(db, 'users', user.uid)).then(docSnap => {
+    getDoc(doc(db, 'users', user.uid)).then((docSnap) => {
       setIsAdmin(!!docSnap.data()?.isAdmin);
     });
   }, [user]);
@@ -77,7 +77,7 @@ const SidebarNav: React.FC = () => {
     >
       {/* Hamburger menu */}
       <button
-        onClick={() => setExpanded(x => !x)}
+        onClick={() => setExpanded((x) => !x)}
         className="mb-8 p-2 rounded hover:bg-[#38025b] transition"
         aria-label={expanded ? 'Collapse sidebar' : 'Expand sidebar'}
       >
@@ -86,9 +86,10 @@ const SidebarNav: React.FC = () => {
 
       {/* Nav links */}
       <nav className="flex flex-col gap-5 w-full">
-        {navLinks.map(link => (
+        {navLinks.map((link) => (
           <Link key={link.href} href={link.href} className="group flex relative">
             <div
+              id={link.id} // 👈 ID for Joyride spotlight
               className={`
                 flex items-center py-3 rounded-xl hover:bg-[#3c1a5b] transition-colors duration-300
                 ${expanded ? 'gap-4 justify-start w/full pl-3 pr-2' : 'justify-center w-full'}
@@ -99,7 +100,9 @@ const SidebarNav: React.FC = () => {
               }}
             >
               <span
-                className={`text-2xl text-yellow-400 drop-shadow-[0_0_6px_rgba(255,238,102,0.9)] flex items-center justify-center ${!expanded ? 'mx-auto' : ''}`}
+                className={`text-2xl text-yellow-400 drop-shadow-[0_0_6px_rgba(255,238,102,0.9)] flex items-center justify-center ${
+                  !expanded ? 'mx-auto' : ''
+                }`}
                 style={{ width: 32, minWidth: 32, height: 32 }}
               >
                 {link.icon}
@@ -144,6 +147,7 @@ const SidebarNav: React.FC = () => {
         {isAdmin && (
           <Link href="/admin" className="group flex relative">
             <div
+              id="nav-admin" // 👈 Admin ID for Joyride spotlight (optional)
               className={`
                 flex items-center py-3 rounded-xl bg-yellow-500 hover:bg-yellow-400 text-black font-bold transition-colors duration-300
                 ${expanded ? 'gap-4 justify-start w-full pl-3 pr-2' : 'justify-center w-full'}
@@ -154,7 +158,9 @@ const SidebarNav: React.FC = () => {
               }}
             >
               <span
-                className={`text-2xl drop-shadow-[0_0_6px_rgba(255,238,102,0.9)] flex items-center justify-center ${!expanded ? 'mx-auto' : ''}`}
+                className={`text-2xl drop-shadow-[0_0_6px_rgba(255,238,102,0.9)] flex items-center justify-center ${
+                  !expanded ? 'mx-auto' : ''
+                }`}
                 style={{ width: 32, minWidth: 32, height: 32 }}
               >
                 <FaShieldAlt />
@@ -194,4 +200,5 @@ const SidebarNav: React.FC = () => {
 };
 
 export default SidebarNav;
+
 

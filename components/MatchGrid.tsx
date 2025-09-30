@@ -15,18 +15,12 @@ type Match = {
   game?: string;
   platform: string;
   entryFee: number;
-  status?: string; // "open" | "joined" | "in_game" | "awaiting-results" | "completed" | "cancelled" | "expired" | "disputed" ...
+  status?: string;
   creatorUserId: string;
   joinerUserId?: string | null;
   division: string;
-
-  // Expiry support (optional)
-  expireAt?: any; // Firestore Timestamp | number(ms) | ISO string
-
-  // NEW: prefer this when present
+  expireAt?: any;
   active?: boolean;
-
-  // Optional: if you pass reports into the grid, we can hide when both reported even before active flips
   reports?: Reports;
 };
 
@@ -40,7 +34,7 @@ const toMillis = (t: any): number | null => {
   if (t == null) return null;
   if (typeof t === 'number') return t;
   if (typeof t === 'string') return Number.isNaN(Date.parse(t)) ? null : Date.parse(t);
-  if (typeof t?.toMillis === 'function') return t.toMillis(); // Firestore Timestamp
+  if (typeof t?.toMillis === 'function') return t.toMillis();
   return null;
 };
 
@@ -54,33 +48,24 @@ const bothReported = (m: Match) =>
   Boolean((m as any)?.reports?.joiner?.outcome);
 
 const isGridActive = (m: Match) => {
-  // 1) Honor explicit "active" flag when provided
   if (typeof (m as any).active === 'boolean') {
     if ((m as any).active === false) return false;
   }
-
-  // 2) Hide if terminal status
   const status = (m.status ?? '').toLowerCase();
   if (['completed', 'cancelled', 'expired', 'disputed'].includes(status)) return false;
-
-  // 3) Hide if both players already reported (safety net while backend flips "active")
   if (bothReported(m)) return false;
-
-  // 4) Fallback to time-based expiry
   return isNotExpiredByTime(m);
 };
 
 export default function MatchGrid({ matches, selectedGameKey }: MatchGridProps) {
   const [user] = useAuthState(auth);
-  const [pageSize, setPageSize] = useState(6); // default desktop
+  const [pageSize, setPageSize] = useState(6);
 
-  // Re-render periodically so items disappear exactly when expireAt passes
   useEffect(() => {
     const id = setInterval(() => setPageSize((s) => s), 30_000);
     return () => clearInterval(id);
   }, []);
 
-  // switch between 5 (mobile) and 6 (desktop)
   useEffect(() => {
     const update = () => setPageSize(window.innerWidth < 768 ? 5 : 6);
     update();
@@ -88,7 +73,6 @@ export default function MatchGrid({ matches, selectedGameKey }: MatchGridProps) 
     return () => window.removeEventListener('resize', update);
   }, []);
 
-  // Prioritize "open" first
   const sortOpenFirst = (arr: Match[]) =>
     [...arr].sort((a, b) => {
       const ao = (a.status ?? '').toLowerCase() === 'open' ? 0 : 1;
@@ -96,7 +80,6 @@ export default function MatchGrid({ matches, selectedGameKey }: MatchGridProps) 
       return ao - bo;
     });
 
-  // Core filter: only show matches considered "active" for the grid
   const visible = matches.filter(isGridActive);
 
   let limited: Match[] = [];
@@ -120,10 +103,14 @@ export default function MatchGrid({ matches, selectedGameKey }: MatchGridProps) 
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 px-3 sm:px-0">
+    <div
+      id="matches-grid" // 👈 Added for onboarding tour
+      className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 px-3 sm:px-0"
+    >
       {limited.map((match) => (
         <MatchCard key={match.id} match={match as any} currentUser={user} />
       ))}
     </div>
   );
 }
+

@@ -42,6 +42,7 @@ export default function QuickJoinButton({ gameId, platform, stake }: Props) {
   return (
     <>
       <button
+        id="quick-join" // 👈 Added for onboarding tour
         onClick={handleClick}
         disabled={loading}
         className="px-4 py-2 rounded-lg bg-purple-600 text-white font-bold hover:bg-purple-700 disabled:opacity-50"
@@ -63,5 +64,6 @@ export default function QuickJoinButton({ gameId, platform, stake }: Props) {
     </>
   );
 }
+
 
 

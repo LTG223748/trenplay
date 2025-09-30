@@ -11,42 +11,15 @@ interface Message {
 
 // ✅ FAQ keyword bank (expand anytime)
 const faqBank: { keywords: string[]; answer: string }[] = [
-  {
-    keywords: ["forgot password", "reset password"],
-    answer: "🔑 To reset your password, click here: /reset-password",
-  },
-  {
-    keywords: ["support", "email", "help"],
-    answer: "📧 You can always reach us at support@trenplay.com.",
-  },
-  {
-    keywords: ["add tc", "deposit", "buy coins"],
-    answer: "💰 To add TrenCoin, click Wallet → Add TC and choose your payment method.",
-  },
-  {
-    keywords: ["withdraw", "cash out", "payout"],
-    answer: "💵 Go to Wallet → Withdraw to cash out your TrenCoin safely.",
-  },
-  {
-    keywords: ["divisions", "ranks", "elo"],
-    answer: "🏆 Divisions are based on ELO: Rookie → Pro → Elite → Legend. Win matches to rank up.",
-  },
-  {
-    keywords: ["rematch"],
-    answer: "🔄 After a match ends, click Rematch to instantly challenge the same player again.",
-  },
-  {
-    keywords: ["quick join", "auto join", "find match"],
-    answer: "⚡ Quick Join lets you pick game, price, and console, then we auto-find you a match.",
-  },
-  {
-    keywords: ["friends", "add friend", "invite"],
-    answer: "👥 Add players to your friends list to challenge them if you’re in the same division.",
-  },
-  {
-    keywords: ["trenbot", "what is this", "who are you"],
-    answer: "🤖 I’m TrenBot, your AI assistant. I can answer basic TrenPlay questions or send you to support@trenplay.com.",
-  },
+  { keywords: ["forgot password", "reset password"], answer: "🔑 To reset your password, click here: /reset-password" },
+  { keywords: ["support", "email", "help"], answer: "📧 You can always reach us at support@trenplay.com." },
+  { keywords: ["add tc", "deposit", "buy coins"], answer: "💰 To add TrenCoin, click Wallet → Add TC and choose your payment method." },
+  { keywords: ["withdraw", "cash out", "payout"], answer: "💵 Go to Wallet → Withdraw to cash out your TrenCoin safely." },
+  { keywords: ["divisions", "ranks", "elo"], answer: "🏆 Divisions are based on ELO: Rookie → Pro → Elite → Legend. Win matches to rank up." },
+  { keywords: ["rematch"], answer: "🔄 After a match ends, click Rematch to instantly challenge the same player again." },
+  { keywords: ["quick join", "auto join", "find match"], answer: "⚡ Quick Join lets you pick game, price, and console, then we auto-find you a match." },
+  { keywords: ["friends", "add friend", "invite"], answer: "👥 Add players to your friends list to challenge them if you’re in the same division." },
+  { keywords: ["trenbot", "what is this", "who are you"], answer: "🤖 I’m TrenBot, your AI assistant. I can answer basic TrenPlay questions or send you to support@trenplay.com." },
 ];
 
 function checkFAQ(input: string): string | null {
@@ -69,17 +42,15 @@ export default function TrenBot() {
   const sendMessage = async () => {
     if (!input.trim() || loading) return;
     const userMsg: Message = { from: "user", text: input };
-    setMessages((prev: Message[]) => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     setInput("");
 
-    // ✅ Step 1: Check FAQ (free, no API)
     const faqAnswer = checkFAQ(userMsg.text);
     if (faqAnswer) {
-      setMessages((prev: Message[]) => [...prev, { from: "bot", text: faqAnswer }]);
+      setMessages((prev) => [...prev, { from: "bot", text: faqAnswer }]);
       return;
     }
 
-    // ✅ Step 2: Call AI API (only if no FAQ match)
     setLoading(true);
     try {
       const res = await fetch("/api/trenbot", {
@@ -93,14 +64,14 @@ export default function TrenBot() {
 
       const data = await res.json();
       const botMsg: Message = { from: "bot", text: data.reply || "⚠️ TrenBot is offline." };
-      setMessages((prev: Message[]) => [...prev, botMsg]);
+      setMessages((prev) => [...prev, botMsg]);
     } catch (err) {
       console.error("TrenBot error:", err);
       const botMsg: Message = {
         from: "bot",
         text: "⚠️ TrenBot is offline. Email support@trenplay.com.",
       };
-      setMessages((prev: Message[]) => [...prev, botMsg]);
+      setMessages((prev) => [...prev, botMsg]);
     } finally {
       setLoading(false);
     }
@@ -110,6 +81,7 @@ export default function TrenBot() {
     <div className="fixed bottom-6 right-6 z-50">
       {!open && (
         <button
+          id="trenbot-button" // 👈 Added for onboarding tour
           onClick={() => setOpen(true)}
           className="bg-yellow-400 text-black p-4 rounded-full shadow-lg hover:bg-yellow-300 transition"
         >
@@ -138,7 +110,6 @@ export default function TrenBot() {
                     : "bg-white/10 text-white self-start"
                 }`}
               >
-                {/* Make reset-password link clickable */}
                 {m.text.includes("/reset-password") ? (
                   <Link href="/reset-password" className="underline text-yellow-400">
                     Reset Password
@@ -177,6 +148,7 @@ export default function TrenBot() {
     </div>
   );
 }
+
 
 
 

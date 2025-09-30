@@ -93,11 +93,17 @@ export default function SignupPage() {
         // ✅ Trust system
         disputeCount: 0,
 
+        // ✅ Referral system
         referralCode,
         referredBy: referralInput || null,
         referralRewarded: false,
+
+        // ✅ Subscription system
         subscriptionActive: false,
         subscriptionExpires: null,
+
+        // ✅ Guided Tour flag
+        hasSeenTour: false,
       });
 
       setSuccess("Account created! Redirecting…");
@@ -184,6 +190,7 @@ export default function SignupPage() {
     </AuthLayout>
   );
 }
+
 
 
 

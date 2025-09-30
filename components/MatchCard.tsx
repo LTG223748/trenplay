@@ -7,9 +7,8 @@ import { formatTCWithUSD } from "../utils/formatCurrency";
 import { GAMES, TrenGameId } from "../lib/games";
 import MatchClaimNoShowButton from "./MatchClaimNoShowButton";
 import notify from "../lib/notify";
-import TrustBadge from "./TrustBadge"; // ✅ NEW
+import TrustBadge from "./TrustBadge";
 
-// Firestore bits
 import {
   doc,
   runTransaction,
@@ -22,30 +21,17 @@ type FireTime = Date | number | string | { toMillis?: () => number };
 
 type Match = {
   id: string;
-
-  /** NEW (preferred) */
   gameId?: TrenGameId;
-  /** BACKWARD COMPAT */
   game?: string;
-
   platform: "Console-Green" | "Console-Blue" | string;
   entryFee: number;
-
-  // status fields
-  status: string;                // "open" | "full" | "pending" | "completed_*" | "closed" | etc.
+  status: string;
   completed?: boolean;
   winnerUid?: string | null;
-
-  // participants
   creatorUserId: string;
   joinerUserId?: string | null;
-
-  // trust badge field
   creatorDisputes?: number;
-
-  // scheduling (for no-show logic)
   scheduledAt?: FireTime;
-
   division: string;
 };
 
@@ -75,13 +61,10 @@ function toMs(v?: FireTime): number {
   if (v instanceof Date) return v.getTime();
   if (typeof v === "number") return v;
   if (typeof v === "string") return new Date(v).getTime();
-  // Firestore Timestamp-like
-  // @ts-ignore
-  if (typeof v === "object" && typeof v.toMillis === "function") return v.toMillis();
+  if (typeof v === "object" && typeof (v as any).toMillis === "function") return (v as any).toMillis();
   return NaN as unknown as number;
 }
 
-// ⏳ helpers for expiry
 const MIN = 60_000;
 const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
 function toMillisAny(t: any): number | null {
@@ -106,7 +89,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
   const youUid = currentUser?.uid ?? "";
   const youAreParticipant = !!youUid && (youUid === local.creatorUserId || youUid === local.joinerUserId);
 
-  // Resolve game label/icon
   const gameMeta = local.gameId ? GAMES[local.gameId] : undefined;
   const gameLabel = gameMeta?.label ?? local.game ?? "Unknown Game";
   const gameIcon = gameMeta?.icon ?? "🎮";
@@ -117,7 +99,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
 
   const schedMs = useMemo(() => toMs(local.scheduledAt), [local.scheduledAt]);
 
-  // 🟡 JOIN
   async function handleJoin() {
     if (!currentUser?.uid) {
       notify("Please log in to join.", "error");
@@ -168,7 +149,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
     }
   }
 
-  // 🔴 CANCEL
   async function handleCancel() {
     if (!isCreator) return;
     if (local.status !== "open") {
@@ -222,9 +202,11 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
               Crossplay
             </span>
           )}
-          {/* ✅ Trust Badge next to game/creator info */}
+          {/* ✅ Trust Badge wrapped for onboarding tour */}
           {local.creatorDisputes !== undefined && (
-            <TrustBadge disputeCount={local.creatorDisputes} />
+            <div id="trust-badge">
+              <TrustBadge disputeCount={local.creatorDisputes} />
+            </div>
           )}
         </div>
 
@@ -335,4 +317,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
     </div>
   );
 }
+
+
 

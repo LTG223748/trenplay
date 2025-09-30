@@ -26,7 +26,6 @@ interface HeaderProps {
 
 type Star = { top: string; left: string; delay: string; duration: string };
 
-// Match your /utils/eloDivision.ts tiers
 const DIVISION_BOUNDS: Record<string, { min: number; max: number | null; next?: string; nextAt?: number }> = {
   Rookie: { min: 0,   max: 700,  next: 'Pro',    nextAt: 700 },
   Pro:    { min: 700, max: 900,  next: 'Elite',  nextAt: 900 },
@@ -39,21 +38,16 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
   const [username, setUsername] = useState<string | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>(STARTER_AVATARS[0]);
 
-  // Display-only state pulled from Firestore
   const [division, setDivision] = useState<string | null>(divisionProp ?? null);
   const [elo, setElo] = useState<number | null>(null);
 
-  // Hover/tap popover for Division
   const [showDivPopover, setShowDivPopover] = useState(false);
 
   const { disconnect } = useWallet();
-
   useEffect(() => setMounted(true), []);
 
-  // Load profile, sticky avatar, division & elo
   useEffect(() => {
     if (!mounted) return;
-
     const fetchProfile = async () => {
       if (!user?.uid) {
         setUsername(null);
@@ -62,15 +56,12 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
         setElo(null);
         return;
       }
-
       try {
         const ref = doc(db, 'users', user.uid);
         const snap = await getDoc(ref);
         const data = snap.data() || {};
 
         setUsername(data.username || user.email?.split('@')[0] || 'Player');
-
-        // Sticky avatar: use saved if present, else persist a deterministic default once
         const saved = normalizeAvatar(data.avatar);
         if (saved) {
           setAvatarUrl(saved);
@@ -78,8 +69,6 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
           const ensured = await persistAvatarIfMissing(user.uid);
           setAvatarUrl(ensured);
         }
-
-        // Division + Elo (your schema uses 'elo')
         setDivision((typeof data.division === 'string' && data.division) || divisionProp || null);
         setElo(typeof data.elo === 'number' && Number.isFinite(data.elo) ? data.elo : null);
       } catch {
@@ -89,31 +78,24 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
         setElo(null);
       }
     };
-
     fetchProfile();
   }, [mounted, user, divisionProp]);
 
-  // Client-only starfield (avoid SSR randomness)
   const stars: Star[] = useMemo(() => {
     if (!mounted) return [];
-    const arr: Star[] = [];
-    for (let i = 0; i < 20; i++) {
-      arr.push({
-        top: `${Math.random() * 100}%`,
-        left: `${Math.random() * 100}%`,
-        delay: `${Math.random() * 5}s`,
-        duration: `${2 + Math.random() * 3}s`,
-      });
-    }
-    return arr;
+    return Array.from({ length: 20 }).map(() => ({
+      top: `${Math.random() * 100}%`,
+      left: `${Math.random() * 100}%`,
+      delay: `${Math.random() * 5}s`,
+      duration: `${2 + Math.random() * 3}s`,
+    }));
   }, [mounted]);
 
-  // Progress bar math for the popover
   const { pct, minLabel, maxLabel, nextLabel } = useMemo(() => {
     const div = (division ?? 'Rookie') as keyof typeof DIVISION_BOUNDS;
     const bounds = DIVISION_BOUNDS[div] || DIVISION_BOUNDS.Rookie;
     const min = bounds.min;
-    const max = bounds.max ?? Math.max(min + 200, (elo ?? min) + 100); // Legend has no cap
+    const max = bounds.max ?? Math.max(min + 200, (elo ?? min) + 100);
     const current = Math.max(min, Math.min(max, elo ?? min));
     const percent = Math.max(0, Math.min(100, ((current - min) / (max - min)) * 100));
     return {
@@ -124,13 +106,12 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
     };
   }, [division, elo]);
 
-  // ---------- SSR shell to avoid hydration mismatch (DESKTOP ONLY) ----------
+  // ---------- SSR shell ----------
   const headerShell = (
     <header
-      className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
+      className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060]"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
-      {/* Left: logo (unchanged size; cropped by header if it overflows) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -143,8 +124,6 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
           />
         </Link>
       </div>
-
-      {/* Right placeholder keeps layout stable during SSR */}
       <div className="flex items-center gap-6 text-sm relative z-10 h-20" aria-hidden>
         <div className="w-56 h-8 rounded-lg bg-white/10" />
       </div>
@@ -153,16 +132,15 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
 
   if (!mounted) return headerShell;
 
-  // ---------- Real header (DESKTOP ONLY) ----------
+  // ---------- Real header ----------
   return (
     <header
-      className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060] overflow-hidden"
+      className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060]"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
-      {/* Rocket overlay (pointer-events disabled by default in its impl) */}
       <RocketAcrossHeader intervalMs={60_000} size={140} />
 
-      {/* Starfield (no pointer capture) */}
+      {/* Starfield */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         {stars.map((s, i) => (
           <span
@@ -180,7 +158,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
         ))}
       </div>
 
-      {/* Left: logo (unchanged size; cropped by header if it overflows) */}
+      {/* Logo */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -194,9 +172,14 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
         </Link>
       </div>
 
-      {/* Right cluster: wallet + auth */}
+      {/* Right cluster */}
       <div className="flex items-center gap-6 text-sm relative z-10 h-20">
-        <WalletMultiButton className="!bg-[#6c4bd3] !text-white !rounded-lg !px-5 !py-2 !h-auto !min-h-0" />
+        {/* 👇 Wallet balance */}
+        <div id="wallet-balance">
+          <WalletMultiButton
+            className="!bg-[#6c4bd3] !text-white !rounded-lg !px-5 !py-2 !h-auto !min-h-0"
+          />
+        </div>
 
         {!user ? (
           <div className="flex items-center">
@@ -215,8 +198,9 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
           </div>
         ) : (
           <div className="flex items-center gap-3 bg-gradient-to-br from-[#200041] via-[#2e005f] to-[#431078] px-5 py-2 rounded-xl shadow-lg border border-yellow-400">
-            {/* Division pill with hover/tap popover */}
+            {/* 👇 Division badge */}
             <div
+              id="division-badge"
               className="relative z-[1000]"
               onMouseEnter={() => setShowDivPopover(true)}
               onMouseLeave={() => setShowDivPopover(false)}
@@ -224,7 +208,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
               <button
                 type="button"
                 className="text-yellow-300 bg-[#2d0140] px-3 py-1 rounded-lg text-lg font-bold border border-yellow-500 shadow"
-                onClick={() => setShowDivPopover(v => !v)} // mobile toggle (no-op on desktop)
+                onClick={() => setShowDivPopover(v => !v)}
                 aria-haspopup="dialog"
                 aria-expanded={showDivPopover}
                 aria-label="Division & Elo"
@@ -232,7 +216,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
                 🥇 {division || 'Rookie'}
               </button>
 
-              {/* Progress popover */}
+              {/* Popover */}
               {showDivPopover && (
                 <div
                   role="dialog"
@@ -282,9 +266,10 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
               {username || 'Player'}
             </span>
 
-            {/* Avatar (sticky; never random on refresh) */}
+            {/* 👇 Profile avatar */}
             <Link href="/profile">
               <img
+                id="profile-avatar"
                 src={avatarUrl}
                 alt="Profile"
                 className="w-10 h-10 rounded-full border-2 border-yellow-400 shadow hover:border-purple-400 cursor-pointer transition"
