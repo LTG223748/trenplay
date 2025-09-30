@@ -5,9 +5,9 @@ import { useAuthState } from 'react-firebase-hooks/auth';
 import {
   doc,
   getDoc,
-  runTransaction,      // 👈 added
-  serverTimestamp,     // 👈 added
-  Timestamp,           // 👈 added
+  runTransaction,
+  serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 
@@ -34,6 +34,8 @@ import * as anchor from '@coral-xyz/anchor';
 import { getTrenbetProgram } from '../src/utils/getTrenbetProgram';
 import { RPC_URL, TREN_MINT } from '../lib/network';
 
+import AddTCModal from './AddTCModal'; // ✅ NEW
+
 interface Match {
   id: string;
   entryFee: number;
@@ -44,7 +46,6 @@ interface Match {
   matchState?: string | null;
   escrowAuthority?: string | null;
   escrowToken?: string | null;
-  // optional: expireAt?: any; // Firestore Timestamp/number/string
 }
 
 interface JoinButtonProps {
@@ -64,7 +65,6 @@ function safePk(
   }
 }
 
-// helpers for expireAt
 const MIN = 60_000;
 const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
 const toMillis = (t: any): number | null => {
@@ -82,7 +82,10 @@ export default function JoinButton({ match }: JoinButtonProps) {
   const [loading, setLoading] = useState(false);
   const [user] = useAuthState(auth);
   const { publicKey, connected } = useWallet();
-  const anchorWallet = useAnchorWallet(); // ✅ anchor-friendly wallet
+  const anchorWallet = useAnchorWallet();
+
+  const [showAddTC, setShowAddTC] = useState(false); // ✅ NEW
+  const [neededTC, setNeededTC] = useState(0);       // ✅ NEW
 
   const isCreator = user?.uid === match.creatorUserId;
   const isFull = !!match.joinerUserId;
@@ -133,7 +136,7 @@ export default function JoinButton({ match }: JoinButtonProps) {
     const connection = new Connection(RPC_URL, 'confirmed');
 
     try {
-      // 0) Quick re-check before spending any gas/fees
+      // Firestore re-check
       const matchRef = doc(db, 'matches', match.id);
       const snap = await getDoc(matchRef);
       const fresh = snap.data() as any;
@@ -143,13 +146,13 @@ export default function JoinButton({ match }: JoinButtonProps) {
       const expMs = toMillis(fresh?.expireAt);
       if (expMs && expMs <= Date.now()) throw new Error('This match has expired.');
 
-      // 1) On-chain join
+      // On-chain join setup
       const program = getTrenbetProgram(connection, anchorWallet);
       const matchStatePk = matchStateCheck.pk!;
       const escrowAuthorityPk = escrowAuthCheck.pk!;
       const escrowTokenPk = escrowTokCheck.pk!;
 
-      // Ensure player2 ATA exists
+      // Ensure ATA exists
       const player2Ata = await getAssociatedTokenAddress(
         mintPk,
         publicKey,
@@ -171,13 +174,15 @@ export default function JoinButton({ match }: JoinButtonProps) {
         await program.provider.sendAndConfirm!(tx, []);
       }
 
-      // Balance check
+      // ✅ Balance check
       const parsed = await connection.getParsedAccountInfo(player2Ata);
       const uiAmt =
         (parsed.value as any)?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0;
       if (uiAmt < match.entryFee) {
+        setNeededTC(match.entryFee - uiAmt);
+        setShowAddTC(true); // ✅ trigger modal
         setLoading(false);
-        return alert(`Not enough TrenCoin (need ${match.entryFee} TC).`);
+        return;
       }
 
       // Call on-chain join
@@ -194,7 +199,7 @@ export default function JoinButton({ match }: JoinButtonProps) {
         })
         .rpc();
 
-      // 2) Firestore: atomically mark as pending and set 5-min expiry
+      // Firestore update
       await runTransaction(db, async (tx) => {
         const ref = doc(db, 'matches', match.id);
         const snap2 = await tx.get(ref);
@@ -212,7 +217,7 @@ export default function JoinButton({ match }: JoinButtonProps) {
           status: 'pending',
           joinerUserId: user!.uid,
           joinerJoinedAt: serverTimestamp(),
-          expireAt: tsPlus(5 * MIN), // 🔑 vanish if abandoned in ~5 min
+          expireAt: tsPlus(5 * MIN),
           updatedAt: serverTimestamp(),
         });
       });
@@ -243,6 +248,18 @@ export default function JoinButton({ match }: JoinButtonProps) {
           : 'Join Match'}
       </button>
 
+      {showAddTC && (
+        <AddTCModal
+          neededTC={neededTC}
+          onClose={() => setShowAddTC(false)}
+          onConfirm={() => {
+            setShowAddTC(false);
+            // TODO: hook into your Add TC / wallet top-up flow here
+            alert('Redirecting to Add TC flow…');
+          }}
+        />
+      )}
+
       <details className="mt-2 text-xs text-gray-300">
         <summary>Debug</summary>
         <ul className="list-disc ml-5 mt-1">
@@ -260,6 +277,7 @@ export default function JoinButton({ match }: JoinButtonProps) {
     </div>
   );
 }
+
 
 
 

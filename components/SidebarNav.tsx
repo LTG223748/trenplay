@@ -11,6 +11,7 @@ import {
   FaQuestionCircle,
   FaShieldAlt,
   FaBookOpen,
+  FaGift,           // 🎁 for Refer
 } from 'react-icons/fa';
 
 import { useAuthState } from 'react-firebase-hooks/auth';
@@ -22,14 +23,16 @@ import { useSidebar } from '../context/SidebarContext';
 const COLLAPSED_WIDTH = 40;
 const EXPANDED_WIDTH = 224;
 
+// ✅ Nav links updated
 const navLinks = [
-  { href: '/', label: 'Home', icon: <FaHome /> },
+  { href: '/app', label: 'Home', icon: <FaHome /> },
   { href: '/leaderboard', label: 'Leaderboard', icon: <FaChartBar /> },
   { href: '/tournaments', label: 'Tournaments', icon: <FaTrophy /> },
   { href: '/profile', label: 'Profile', icon: <FaUser /> },
   { href: '/matches', label: 'Matches', icon: <FaGamepad /> },
-  { href: '/refer', label: 'Refer', icon: <FaUsers /> },
-  { href: '/howto', label: 'How To Use', icon: <FaBookOpen /> },   // ✅ route fixed to match pages/howto.tsx
+  { href: '/friends', label: 'Friends', icon: <FaUsers /> },   // 👥 Friends list
+  { href: '/refer', label: 'Refer', icon: <FaGift /> },        // 🎁 Referral program
+  { href: '/howto', label: 'How To Use', icon: <FaBookOpen /> },
   { href: '/help', label: 'Help', icon: <FaQuestionCircle /> },
 ];
 
@@ -126,8 +129,6 @@ const SidebarNav: React.FC = () => {
                   shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto 
                   transition-all whitespace-nowrap z-[9999]"
                 style={{
-                  top: undefined,
-                  bottom: undefined,
                   marginTop: 8,
                   minWidth: 80,
                   left: 56,
@@ -193,3 +194,4 @@ const SidebarNav: React.FC = () => {
 };
 
 export default SidebarNav;
+

@@ -1,242 +1,158 @@
 // pages/index.tsx
-import { useEffect, useMemo, useState } from 'react';
-import dynamic from 'next/dynamic';
-import { auth, db } from '../lib/firebase';
-import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore';
-import { useAuthState } from 'react-firebase-hooks/auth';
+import Head from "next/head";
+import Link from "next/link";
 
-import BottomContent from '../components/BottomContent';
-import Footer from '../components/Footer';
-
-import Link from 'next/link';
-import { FaQuestionCircle } from 'react-icons/fa';
-import notify from '../lib/notify';
-
-// ---- Types aligned with GameFilterBar ----
-import type { TrenGameId } from '../lib/games';
-type GameKey = TrenGameId | 'all';
-
-// Client-only components
-const HeroSlider = dynamic(() => import('../components/HeroSlider'), { ssr: false });
-const DivisionFlanks = dynamic(() => import('../components/DivisionFlanks'), { ssr: false });
-const MatchGrid = dynamic(() => import('../components/MatchGrid'), { ssr: false });
-const GameFilterBar = dynamic(() => import('../components/GameFilterBar'), { ssr: false });
-
-// ---------- helpers for home feed cleanup ----------
-const toMillis = (t: any) =>
-  t?.toMillis?.() ?? (typeof t === 'number' ? t : typeof t === 'string' ? Date.parse(t) : null);
-
-// treat legacy docs with no expireAt as dead if older than 2h
-const isAlive = (m: any) => {
-  const exp = toMillis(m?.expireAt);
-  if (typeof exp === 'number') return exp > Date.now();
-  const created = toMillis(m?.createdAt);
-  return created ? Date.now() - created < 2 * 60 * 60 * 1000 : false;
-};
-
-// only show joinable-ish statuses on the home feed
-const ALLOWED = new Set(['open', 'pending', 'active']);
-
-export default function HomePage() {
-  const [user, loading, error] = useAuthState(auth);
-
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-
-  const [tc, setTc] = useState(0);
-  const [division, setDivision] = useState('');
-  const [matches, setMatches] = useState<any[]>([]);
-
-  const [activeGame, setActiveGame] = useState<GameKey>('all');
-
-  // Load profile
-  useEffect(() => {
-    if (!mounted) return;
-    if (!user) {
-      setTc(0);
-      setDivision('');
-      return;
-    }
-    (async () => {
-      try {
-        const ref = doc(db, 'users', user.uid);
-        const snap = await getDoc(ref);
-        const data = snap.data();
-        setTc(data?.tc || 0);
-        setDivision(data?.division || 'Unranked');
-        if (data?.referralBonusJustReceived) {
-          notify('🎉 Referral Bonus!', 'You and your friend just earned 1,000 TC each!', 'success');
-          await updateDoc(ref, { referralBonusJustReceived: false });
-        }
-      } catch (err) {
-        console.log('Error loading profile:', err);
-      }
-    })();
-  }, [mounted, user]);
-
-  // Load matches (then clean)
-  useEffect(() => {
-    if (!mounted) return;
-    (async () => {
-      const snap = await getDocs(collection(db, 'matches'));
-      const all = snap.docs.map((d) => ({ id: d.id, ...d.data() } as any));
-
-      const cleaned = all
-        .filter((m) => ALLOWED.has((m.status ?? '').toLowerCase()))
-        .filter(isAlive);
-
-      setMatches(cleaned);
-    })();
-  }, [mounted]);
-
-  const norm = (s: any) =>
-    (s ?? '')
-      .toString()
-      .trim()
-      .toLowerCase()
-      .replace(/[\s_-]/g, '');
-
-  const CATEGORY_ALIASES: Record<string, string[]> = {
-    nba2k: ['nba2k', '2k', 'nba2k24', 'nba2k25'],
-    fifa: ['fifa', 'eafc', 'fc24', 'fc25', 'ea'],
-    ufc: ['ufc'],
-    madden: ['madden', 'nfl', 'madden24', 'madden25'],
-    cfb: ['collegefootball', 'cfb', 'ncaa', 'ncaafootball'],
-    mlb: ['mlbtheshow', 'mlb', 'theshow', 'mlb24', 'mlb25'],
-    nhl: ['nhl', 'hockey'],
-    fortnite_build: ['fortnite', 'fortnitebuild', 'fn', 'build'],
-    rocket_league: ['rocketleague', 'rl', 'rocket', 'carball'],
-  };
-
-  // Apply category + alive filter (defensive in case matches updates elsewhere)
-  const filteredMatches = useMemo(() => {
-    const base = matches
-      .filter((m: any) => ALLOWED.has((m.status ?? '').toLowerCase()))
-      .filter(isAlive);
-
-    if (activeGame === 'all') return base;
-
-    return base.filter((m: any) => {
-      const gameField = m.game ?? m.title ?? '';
-      const g = norm(gameField);
-      const key = norm(activeGame);
-      if (g === key) return true;
-      const aliases = CATEGORY_ALIASES[key] ?? [key];
-      return aliases.some((a) => g.includes(a));
-    });
-  }, [matches, activeGame]);
-
-  useEffect(() => {
-    console.log('Auth state:', { user, loading, error });
-  }, [user, loading, error]);
-
+export default function Landing() {
   return (
     <>
-      {mounted ? <HeroSlider /> : <div style={{ height: 280 }} />}
+      <Head>
+        <title>TrenPlay — The Future of Console Competition</title>
+        <meta
+          name="description"
+          content="Skill decides it all. Stake TrenCoin, compete, and win real rewards."
+        />
+      </Head>
 
-      <GameFilterBar
-        selectedGameKey={activeGame}
-        onChange={(key) => setActiveGame(key as GameKey)}
-      />
+      <main className="min-h-screen bg-[#0b0720] text-white font-[Orbitron]">
+        {/* Header */}
+        <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
+          <div className="flex items-center gap-3">
+            <div className="h-9 w-9 rounded-lg bg-purple-500/30 backdrop-blur" />
+            <span className="font-extrabold tracking-wide text-xl">
+              TREN<span className="text-yellow-400">PLAY</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/login"
+              className="rounded-xl px-4 py-2 text-sm ring-1 ring-white/15 hover:bg-white/5"
+            >
+              Log in
+            </Link>
+            <Link
+              href="/signup"
+              className="rounded-xl bg-yellow-400 px-5 py-2 text-black font-semibold hover:bg-yellow-300"
+            >
+              Sign up
+            </Link>
+          </div>
+        </header>
 
-      {mounted ? <MatchGrid matches={filteredMatches} /> : <div className="min-h-[200px]" />}
-      <BottomContent />
-
-      {mounted ? <DivisionFlanks /> : null}
-
-      {/* SECURITY & FAIR PLAY */}
-      <section className="mt-16 max-w-4xl mx-auto px-6 text-white">
-        <h2 className="text-3xl font-extrabold text-yellow-400 mb-6 sm:mb-8 text-center [text-shadow:0_0_16px_rgba(250,204,21,.65)]">
-          Security & Fair Play
-        </h2>
-        {/* Mobile: horizontal row (swipe), Desktop: grid */}
-        <div
-          className="
-            flex gap-4 overflow-x-auto
-            sm:grid sm:grid-cols-2 lg:grid-cols-4 sm:gap-8
-            text-center
-            snap-x snap-mandatory sm:overflow-visible
-            [&::-webkit-scrollbar]:hidden [scrollbar-width:none]
-            -mx-2 px-2 sm:mx-0 sm:px-0
-          "
-        >
-          <div className="min-w-[220px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink sm:snap-normal">
-            <svg width="60" height="60" viewBox="0 0 64 64" className="mx-auto mb-3 sm:mb-4">
-              <path fill="#FACC15" d="M32 4l22 8v14c0 15.4 9.5 25.9 22 34-12.5-8.1-22-18.6-22-34V12l22-8z" />
-              <path fill="#00000022" d="M32 4v52c12.5-8.1 22-18.6 22-34V12l-22-8z"/>
-            </svg>
-            <h3 className="font-semibold mb-1 sm:mb-2">Anti-Cheat Measures</h3>
-            <p className="text-gray-300 text-xs sm:text-sm">
-              Detection, verification, and pattern checks keep every match fair.
+        {/* Hero */}
+        <section className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-6 pb-20 pt-12 md:grid-cols-2">
+          <div>
+            <h1 className="text-4xl font-extrabold leading-tight md:text-5xl">
+              TrenPlay — The Future of Console Competition
+            </h1>
+            <p className="mt-4 max-w-xl text-white/70">
+              Where skill decides it all. Stake TrenCoin, play your favorite
+              games, and win rewards. Fair, secure, and built for players.
             </p>
+            <div className="mt-6 flex gap-3">
+              <Link
+                href="/signup"
+                className="rounded-xl bg-yellow-400 px-6 py-3 text-black font-semibold hover:bg-yellow-300"
+              >
+                Start Playing
+              </Link>
+              <Link
+                href="#how-it-works"
+                className="rounded-xl px-6 py-3 ring-1 ring-white/15 hover:bg-white/5"
+              >
+                How it works
+              </Link>
+            </div>
           </div>
 
-          <div className="min-w-[220px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink sm:snap-normal">
-            <svg width="60" height="60" viewBox="0 0 64 64" className="mx-auto mb-3 sm:mb-4">
-              <rect x="6" y="16" width="52" height="36" rx="6" fill="#FACC15" />
-              <rect x="12" y="10" width="12" height="8" rx="2" fill="#FACC15" />
-              <circle cx="32" cy="34" r="11" fill="#00000020" />
-              <circle cx="32" cy="34" r="8" fill="#00000033" />
-            </svg>
-            <h3 className="font-semibold mb-1 sm:mb-2">Match Proof System</h3>
-            <p className="text-gray-300 text-xs sm:text-sm">
-              Upload a screenshot or clip of the final score for instant verification.
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+            {/* Placeholder for mascot/preview image */}
+            <div className="aspect-video w-full rounded-xl bg-gradient-to-r from-purple-600 to-yellow-400 flex items-center justify-center text-2xl font-bold">
+              TrenPlay Preview
+            </div>
+            <p className="mt-3 text-center text-xs text-white/50">
+              Your arena for console competition.
             </p>
           </div>
+        </section>
 
-          <div className="min-w-[220px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink sm:snap-normal">
-            <svg width="60" height="60" viewBox="0 0 64 64" className="mx-auto mb-3 sm:mb-4">
-              <rect x="10" y="28" width="44" height="26" rx="6" fill="#FACC15" />
-              <path fill="#FACC15" d="M20 28v-6c0-7 5-12 12-12s12 5 12 12v6h-6v-6c0-3.3-2.7-6-6-6s-6 2.7-6 6v6h-6z"/>
-              <circle cx="32" cy="41" r="4.5" fill="#00000033" />
-              <rect x="30.8" y="41" width="2.4" height="7" rx="1" fill="#00000033" />
-            </svg>
-            <h3 className="font-semibold mb-1 sm:mb-2">Secure Escrow</h3>
-            <p className="text-gray-300 text-xs sm:text-sm">
-              Your coins are held safely while you play and released on confirmed results.
-            </p>
+        {/* Why TrenPlay */}
+        <section className="mx-auto max-w-7xl px-6 pb-24">
+          <h2 className="text-2xl font-bold mb-6">Why TrenPlay?</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+              <h3 className="font-semibold mb-2">Powered by TrenCoin</h3>
+              <p className="text-white/70">
+                All matches use TrenCoin on Solana — fast, secure, and transparent.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+              <h3 className="font-semibold mb-2">Fair Play</h3>
+              <p className="text-white/70">
+                Secure escrow and dispute resolution keep matches honest.
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/5 p-6">
+              <h3 className="font-semibold mb-2">Skill-Based Competition</h3>
+              <p className="text-white/70">
+                No luck, no gimmicks. Just pure competition in your favorite titles.
+              </p>
+            </div>
           </div>
+        </section>
 
-          <div className="min-w-[220px] flex-shrink-0 snap-start sm:min-w-0 sm:flex-shrink sm:snap-normal">
-            <svg width="60" height="60" viewBox="0 0 64 64" className="mx-auto mb-3 sm:mb-4">
-              <path fill="#FACC15" d="M30 10h4v10h12v4H18v-4h12V10zM30 24h4v26h10v4H20v-4h10V24z"/>
-              <line x1="32" y1="28" x2="18" y2="34" stroke="#FACC15" strokeWidth="4" />
-              <path fill="#FACC15" d="M10 34l8-4 8 4c0 6-3.6 12-8 12s-8-6-8-12z" />
-              <line x1="32" y1="28" x2="46" y2="34" stroke="#FACC15" strokeWidth="4" />
-              <path fill="#FACC15" d="M38 34l8-4 8 4c0 6-3.6 12-8 12s-8-6-8-12z" />
-            </svg>
-            <h3 className="font-semibold mb-1 sm:mb-2">Dispute Resolution</h3>
-            <p className="text-gray-300 text-xs sm:text-sm">
-              Transparent reviews for conflicts—evidence-based, fast, and fair.
-            </p>
+        {/* How it works */}
+        <section id="how-it-works" className="mx-auto max-w-7xl px-6 pb-24">
+          <h2 className="text-2xl font-bold mb-6">How it works</h2>
+          <div className="grid gap-6 md:grid-cols-3">
+            {[
+              ["Find a Match", "Choose your game and stake TrenCoin."],
+              ["Compete", "Play your opponent in a skill-based match."],
+              ["Win & Get Paid", "Winners are instantly rewarded in TrenCoin."],
+            ].map(([title, desc]) => (
+              <div
+                key={title}
+                className="rounded-xl border border-white/10 bg-white/5 p-6"
+              >
+                <h3 className="font-semibold mb-2">{title}</h3>
+                <p className="text-white/70">{desc}</p>
+              </div>
+            ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* FAQ SNEAK PEEK */}
-      <section className="mt-20 max-w-4xl mx-auto px-6 text-white">
-        <h2 className="text-3xl font-extrabold text-yellow-400 mb-8 text-center [text-shadow:0_0_14px_rgba(250,204,21,.6)]">
-          FAQ Sneak Peek
-        </h2>
-        <ul className="space-y-4 max-w-xl mx-auto">
-          {['How do I connect my crypto wallet?','What are Tren Coins used for?','Is TrenPlay fair and skill-based?','How do I start competing?','How do divisions work?'].map((q) => (
-            <li key={q} className="flex items-center gap-3">
-              <FaQuestionCircle className="text-yellow-400 text-2xl flex-shrink-0" />
-              <span>{q}</span>
-            </li>
-          ))}
-        </ul>
-        <div className="text-center mt-6">
-          <Link
-            href="/faq"
-            className="inline-block bg-yellow-400 hover:bg-yellow-300 text-black font-bold px-6 py-3 rounded-full transition shadow-[0_0_18px_rgba(250,204,21,.55)]"
-          >
-            View Full FAQ
+        {/* FAQ */}
+        <section className="mx-auto max-w-4xl px-6 pb-24">
+          <h2 className="text-2xl font-bold mb-6 text-center">FAQ</h2>
+          <ul className="space-y-4">
+            {[
+              "What is TrenCoin?",
+              "How do I join a match?",
+              "How do payouts work?",
+              "How do divisions work?",
+            ].map((q) => (
+              <li
+                key={q}
+                className="rounded-lg border border-white/10 bg-white/5 p-4"
+              >
+                {q}
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Footer */}
+        <footer className="border-t border-white/10 py-10 text-center text-xs text-white/50">
+          © {new Date().getFullYear()} TrenPlay •{" "}
+          <Link href="/terms" className="underline">
+            Terms
+          </Link>{" "}
+          •{" "}
+          <Link href="/privacy" className="underline">
+            Privacy
           </Link>
-        </div>
-      </section>
-
-      <Footer />
+        </footer>
+      </main>
     </>
   );
 }
+

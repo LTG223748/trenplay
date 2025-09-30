@@ -1,4 +1,3 @@
-// components/Layout.tsx
 'use client';
 
 import React, { ReactNode } from 'react';
@@ -11,7 +10,8 @@ import MobileSignUp from '@/components/MobileSignUp';
 import { useSidebar } from '../context/SidebarContext';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import { auth } from '../lib/firebase';
-import JoinedMatchWatcher from '@/components/JoinedMatchWatcher'; // 👈 add this
+import JoinedMatchWatcher from '@/components/JoinedMatchWatcher';
+import TrenBot from './TrenBot';   // ✅ import TrenBot
 
 interface LayoutProps {
   tc?: number;
@@ -27,8 +27,6 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
   const sidebarWidth = expanded ? EXPANDED_WIDTH : COLLAPSED_WIDTH;
 
   const pathname = usePathname();
-  const isHome = pathname === '/';
-
   const [user] = useAuthState(auth);
 
   return (
@@ -57,7 +55,7 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
         <SidebarNav />
       </div>
 
-      {/* Spacer for fixed sidebar (desktop only) */}
+      {/* Spacer for fixed sidebar */}
       <div
         className="hidden md:block"
         style={{ width: sidebarWidth, minWidth: sidebarWidth, flexShrink: 0 }}
@@ -71,31 +69,33 @@ const Layout: React.FC<LayoutProps> = ({ tc, division, children }) => {
           <MobileHeader />
         </div>
 
-        {/* Mobile sidebar trigger + overlay */}
+        {/* Mobile sidebar trigger */}
         <div className="md:hidden">
           <MobileSidebar />
         </div>
 
-        {/* Desktop header */}
-        {isHome && (
+        {/* ✅ Desktop header on app routes only */}
+        {pathname !== '/' && (
           <div className="hidden md:block">
             <Header user={user} tc={tc} division={division} />
           </div>
         )}
 
-        {/* Add bottom padding so content isn't hidden behind MobileSignUp on mobile */}
         <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6">
           {children}
         </main>
       </div>
 
-      {/* Mobile sticky Join/Login bar (only when logged out) */}
+      {/* Mobile sticky Sign Up bar (only when logged out) */}
       {!user && <MobileSignUp />}
 
-      {/* 👇 mount ONE watcher globally so we don't get duplicate popups */}
+      {/* 👇 global watchers + TrenBot */}
       <JoinedMatchWatcher />
+      <TrenBot />   {/* ✅ add here so it floats bottom-right */}
     </div>
   );
 };
 
 export default Layout;
+
+

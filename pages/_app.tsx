@@ -48,9 +48,13 @@ function FirestoreNotificationListener() {
   return null;
 }
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps, router }: AppProps & { router: any }) {
   const endpoint = RPC_URL;
   const wallets = useMemo(() => [new PhantomWalletAdapter(), new SolflareWalletAdapter()], []);
+
+  // Pages that should NOT use Layout
+  const noLayoutRoutes = ['/', '/login', '/signup'];
+  const useLayout = !noLayoutRoutes.includes(router.pathname);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
@@ -59,11 +63,14 @@ export default function App({ Component, pageProps }: AppProps) {
           <SidebarProvider>
             <NotificationProvider>
               <AdminBanner />
-              {/* Removed GlobalJoinListener — join popups now handled by JoinedMatchWatcher mounted inside Layout */}
               <FirestoreNotificationListener />
-              <Layout>
+              {useLayout ? (
+                <Layout>
+                  <Component {...pageProps} />
+                </Layout>
+              ) : (
                 <Component {...pageProps} />
-              </Layout>
+              )}
             </NotificationProvider>
           </SidebarProvider>
         </WalletModalProvider>
@@ -71,6 +78,7 @@ export default function App({ Component, pageProps }: AppProps) {
     </ConnectionProvider>
   );
 }
+
 
 
 

@@ -2,7 +2,14 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useAuthState } from 'react-firebase-hooks/auth';
-import { addDoc, collection, serverTimestamp, doc, getDoc, Timestamp } from 'firebase/firestore'; // ← added Timestamp
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  doc,
+  getDoc,
+  Timestamp,
+} from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 
 import { useWallet, useAnchorWallet } from '@solana/wallet-adapter-react';
@@ -28,6 +35,7 @@ import { getTrenbetProgram } from '../src/utils/getTrenbetProgram';
 import { deriveMatchStatePda, deriveEscrowAuthorityPda } from '../src/utils/pdas';
 import { RPC_URL, TREN_MINT } from '../lib/network';
 import notify from '../lib/notify';
+import AddTCModal from '../components/AddTCModal'; // ✅ NEW
 
 const ENTRY_OPTIONS = [
   { label: '0.01 TC (test)', value: 0.01 },
@@ -52,13 +60,11 @@ const games = [
   'NHL 25', 'NHL 26', 'Rocket League', 'Fortnite 1v1'
 ];
 
-// === HARD WIRES (devnet) ===
 const HARDCODED_PLAYER1_ATA = new PublicKey('CRFQewYNA3DVyFqEEH1kUtyiZhEi2RTtC8enSw5T48VG');
 
-// 🔑 Small helper for “expires in X minutes” timestamps
 const MIN_MS = 60_000;
 const tsPlus = (ms: number) => Timestamp.fromDate(new Date(Date.now() + ms));
-const OPEN_TTL_MIN = 30; // open matches live for 30 minutes
+const OPEN_TTL_MIN = 30;
 
 function CreateMatchPage() {
   const { publicKey, connected } = useWallet();
@@ -72,10 +78,13 @@ function CreateMatchPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // modal state
+  const [showAddTC, setShowAddTC] = useState(false);
+  const [neededTC, setNeededTC] = useState(0);
+
   const connection = new Connection(RPC_URL, 'confirmed');
   const mint = new PublicKey(TREN_MINT);
 
-  // ✨ generate sparkle points once
   const sparklePoints = useMemo(
     () =>
       Array.from({ length: 40 }).map((_, i) => ({
@@ -119,6 +128,24 @@ function CreateMatchPage() {
     setLoading(true);
 
     try {
+      // ✅ Balance check before doing anything expensive
+      const ata = await getAssociatedTokenAddress(
+        mint,
+        publicKey,
+        false,
+        TOKEN_PROGRAM_ID,
+        ASSOCIATED_TOKEN_PROGRAM_ID
+      );
+      const parsed = await connection.getParsedAccountInfo(ata);
+      const uiAmt =
+        (parsed.value as any)?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0;
+      if (uiAmt < entryFee) {
+        setNeededTC(entryFee - uiAmt);
+        setShowAddTC(true);
+        setLoading(false);
+        return;
+      }
+
       const program = getTrenbetProgram(connection, anchorWallet);
       const matchId = new anchor.BN(Date.now().toString());
 
@@ -196,8 +223,6 @@ function CreateMatchPage() {
         matchState: matchState.toBase58(),
         escrowAuthority: escrowAuthority.toBase58(),
         escrowToken: escrowToken.toBase58(),
-
-        // 🔑 NEW: make open matches disappear from the UI after 30 minutes
         expireAt: tsPlus(OPEN_TTL_MIN * MIN_MS),
       });
 
@@ -235,15 +260,14 @@ function CreateMatchPage() {
         ))}
       </div>
 
-      {/* Title with gradient text */}
       <h1 className="text-3xl font-extrabold mb-6 bg-gradient-to-r from-fuchsia-500 to-cyan-500 bg-clip-text text-transparent drop-shadow-lg">
         🎮 Create a Match
       </h1>
 
-      {/* Card */}
       <div className="w-full max-w-md bg-[#1a1a2e] p-6 rounded-xl border border-purple-700/40 shadow-[0_0_25px_rgba(139,92,246,0.25)] relative z-10">
         {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
 
+        {/* Game Select */}
         <label className="block mb-2 text-sm font-medium">Select Game</label>
         <select
           value={game}
@@ -256,6 +280,7 @@ function CreateMatchPage() {
           ))}
         </select>
 
+        {/* Console Select */}
         <label className="block mb-2 text-sm font-medium">Select Console</label>
         <select
           value={platform}
@@ -270,6 +295,7 @@ function CreateMatchPage() {
           ))}
         </select>
 
+        {/* Entry Fee Select */}
         <label className="block mb-2 text-sm font-medium">Entry Fee (TC)</label>
         <select
           value={entryFee}
@@ -281,10 +307,9 @@ function CreateMatchPage() {
           ))}
         </select>
         <p className="text-xs text-gray-400 italic mt-2 mb-6">
-          Disclaimer: All wagers are conducted exclusively in TrenCoin (TC) on devnet. These are test tokens for development purposes only.
+          Disclaimer: All wagers are conducted exclusively in TrenCoin (TC).
         </p>
 
-        {/* Gradient CTA */}
         <button
           onClick={handleCreateMatch}
           disabled={loading}
@@ -300,7 +325,18 @@ function CreateMatchPage() {
         </button>
       </div>
 
-      {/* Sparkle keyframes */}
+      {showAddTC && (
+        <AddTCModal
+          neededTC={neededTC}
+          onClose={() => setShowAddTC(false)}
+          onConfirm={() => {
+            setShowAddTC(false);
+            // TODO: hook into your Add TC / wallet top-up flow
+            alert('Redirecting to Add TC flow…');
+          }}
+        />
+      )}
+
       <style jsx>{`
         @keyframes sparkle {
           0%, 100% { opacity: 0.7; transform: scale(1); }

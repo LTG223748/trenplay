@@ -7,6 +7,7 @@ import { formatTCWithUSD } from "../utils/formatCurrency";
 import { GAMES, TrenGameId } from "../lib/games";
 import MatchClaimNoShowButton from "./MatchClaimNoShowButton";
 import notify from "../lib/notify";
+import TrustBadge from "./TrustBadge"; // ✅ NEW
 
 // Firestore bits
 import {
@@ -39,6 +40,9 @@ type Match = {
   creatorUserId: string;
   joinerUserId?: string | null;
 
+  // trust badge field
+  creatorDisputes?: number;
+
   // scheduling (for no-show logic)
   scheduledAt?: FireTime;
 
@@ -52,24 +56,12 @@ interface MatchCardProps {
 
 function getPlatformIcon(platform: string) {
   if (platform === "Console-Green") {
-    return (
-      <span role="img" aria-label="Console-Green" className="text-green-400 text-lg mr-1">
-        🎮
-      </span>
-    );
+    return <span role="img" aria-label="Console-Green" className="text-green-400 text-lg mr-1">🎮</span>;
   }
   if (platform === "Console-Blue") {
-    return (
-      <span role="img" aria-label="Console-Blue" className="text-blue-400 text-lg mr-1">
-        🎮
-      </span>
-    );
+    return <span role="img" aria-label="Console-Blue" className="text-blue-400 text-lg mr-1">🎮</span>;
   }
-  return (
-    <span role="img" aria-label="Game" className="text-purple-400 text-lg mr-1">
-      🕹️
-    </span>
-  );
+  return <span role="img" aria-label="Game" className="text-purple-400 text-lg mr-1">🕹️</span>;
 }
 
 function getBorder(platform: string) {
@@ -125,7 +117,7 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
 
   const schedMs = useMemo(() => toMs(local.scheduledAt), [local.scheduledAt]);
 
-  // 🟡 JOIN: set pending + 5-minute expiry in a transaction
+  // 🟡 JOIN
   async function handleJoin() {
     if (!currentUser?.uid) {
       notify("Please log in to join.", "error");
@@ -155,7 +147,7 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
           status: "pending",
           joinerUserId: currentUser.uid,
           joinerJoinedAt: serverTimestamp(),
-          expireAt: tsPlus(5 * MIN), // 🔑 vanish if abandoned
+          expireAt: tsPlus(5 * MIN),
           updatedAt: serverTimestamp(),
         });
       });
@@ -176,7 +168,7 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
     }
   }
 
-  // 🔴 CANCEL (Creator only, when open): closes immediately with a short expireAt
+  // 🔴 CANCEL
   async function handleCancel() {
     if (!isCreator) return;
     if (local.status !== "open") {
@@ -199,7 +191,7 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
 
         tx.update(ref, {
           status: "closed",
-          expireAt: tsPlus(60_000), // optional: hide everywhere soon
+          expireAt: tsPlus(60_000),
           updatedAt: serverTimestamp(),
         });
       });
@@ -230,6 +222,10 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
               Crossplay
             </span>
           )}
+          {/* ✅ Trust Badge next to game/creator info */}
+          {local.creatorDisputes !== undefined && (
+            <TrustBadge disputeCount={local.creatorDisputes} />
+          )}
         </div>
 
         <span
@@ -246,7 +242,7 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
         </span>
       </div>
 
-      {/* Status chip (Completed / Open / Full / Pending / Closed) */}
+      {/* Status chip */}
       <div className="mb-2">
         {completed ? (
           <span className="inline-flex items-center rounded bg-green-500/15 px-2 py-0.5 font-semibold text-green-300 text-xs">
@@ -276,16 +272,15 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
         <strong>Entry Fee:</strong> {formatTCWithUSD(local.entryFee)}
       </p>
 
-      {/* Scheduled time (if available) */}
       {Number.isFinite(schedMs) && (
         <p className="text-sm text-blue-300/90 mt-1">
-          <strong>Scheduled:</strong> {new Date(schedMs as number).toLocaleString()}
+          <strong>Scheduled:</strong>{" "}
+          {new Date(schedMs as number).toLocaleString()}
         </p>
       )}
 
       {/* Actions */}
       <div className="mt-3 flex flex-wrap items-center gap-3">
-        {/* Join (non-creator, not full, not completed, not pending/closed) */}
         {!isCreator && !isFull && !completed && local.status === "open" && (
           <button
             onClick={handleJoin}
@@ -296,7 +291,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
           </button>
         )}
 
-        {/* Cancel (creator only, open) */}
         {isCreator && !completed && local.status === "open" && (
           <button
             onClick={handleCancel}
@@ -308,7 +302,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
           </button>
         )}
 
-        {/* Creator notice when someone joins */}
         {isCreator && !!local.joinerUserId && !completed && (
           <div className="p-2 bg-green-800 text-yellow-300 text-xs rounded shadow">
             ✅ A player has joined!
@@ -318,7 +311,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
           </div>
         )}
 
-        {/* Claim No-Show (participant-only, 10-min lock, not completed) */}
         {!completed && youAreParticipant && Number.isFinite(schedMs) && (
           <MatchClaimNoShowButton
             matchId={local.id}
@@ -326,7 +318,6 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
             claimantUid={youUid}
             participantUids={[local.creatorUserId, local.joinerUserId ?? undefined]}
             onSuccess={(winner) => {
-              // Optimistically flip this card to completed
               setLocal((prev) => ({
                 ...prev,
                 completed: true,
@@ -344,3 +335,4 @@ export default function MatchCard({ match, currentUser }: MatchCardProps) {
     </div>
   );
 }
+
