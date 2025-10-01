@@ -135,7 +135,7 @@ function HomePageContent() {
     console.log('Auth state:', { user, loading, error });
   }, [user, loading, error]);
 
-    return (
+  return (
     <>
       {mounted ? <HeroSlider /> : <div style={{ height: 280 }} />}
 
@@ -149,20 +149,26 @@ function HomePageContent() {
 
       {mounted ? <DivisionFlanks /> : null}
 
-      {/* SECURITY & FAIR PLAY */}
-      <section className="mt-16 max-w-4xl mx-auto px-6 text-white">
-        <h2 className="text-3xl font-extrabold text-yellow-400 mb-6 text-center">
-          Security & Fair Play
-        </h2>
-        {/* paste your 4 security cards here */}
-      </section>
-
       {/* FAQ SNEAK PEEK */}
       <section className="mt-20 max-w-4xl mx-auto px-6 text-white">
         <h2 className="text-3xl font-extrabold text-yellow-400 mb-8 text-center">
           FAQ Sneak Peek
         </h2>
-        {/* paste your FAQ list here */}
+        <ul className="space-y-4">
+          {[
+            '❓ What is TrenCoin?',
+            '🎮 How do I join a match?',
+            '💰 How do payouts work?',
+            '🏆 How do divisions work?',
+          ].map((q) => (
+            <li
+              key={q}
+              className="rounded-lg border border-purple-700/30 bg-purple-700/10 p-4 text-purple-200 hover:bg-purple-700/20 transition"
+            >
+              {q}
+            </li>
+          ))}
+        </ul>
       </section>
 
       <Footer />

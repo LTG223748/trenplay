@@ -112,6 +112,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
       className="hidden md:flex relative z-40 justify-between items-center pr-6 bg-[#1a0030] text-white border-b border-[#3b2060]"
       style={{ minHeight: 80, height: 80, maxHeight: 80 }}
     >
+      {/* Left: logo (unchanged size; cropped by header if it overflows) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -158,7 +159,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
         ))}
       </div>
 
-      {/* Logo */}
+      {/* Left: logo (unchanged size; cropped by header if it overflows) */}
       <div className="flex items-center h-full ml-0">
         <Link href="/">
           <Image
@@ -174,7 +175,6 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
 
       {/* Right cluster */}
       <div className="flex items-center gap-6 text-sm relative z-10 h-20">
-        {/* 👇 Wallet balance */}
         <div id="wallet-balance">
           <WalletMultiButton
             className="!bg-[#6c4bd3] !text-white !rounded-lg !px-5 !py-2 !h-auto !min-h-0"
@@ -198,7 +198,7 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
           </div>
         ) : (
           <div className="flex items-center gap-3 bg-gradient-to-br from-[#200041] via-[#2e005f] to-[#431078] px-5 py-2 rounded-xl shadow-lg border border-yellow-400">
-            {/* 👇 Division badge */}
+            {/* Division badge */}
             <div
               id="division-badge"
               className="relative z-[1000]"
@@ -216,7 +216,6 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
                 🥇 {division || 'Rookie'}
               </button>
 
-              {/* Popover */}
               {showDivPopover && (
                 <div
                   role="dialog"
@@ -261,12 +260,10 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
               )}
             </div>
 
-            {/* Username */}
             <span className="text-white font-semibold bg-[#3c1867] px-3 py-1 rounded-lg shadow border border-purple-600 text-base">
               {username || 'Player'}
             </span>
 
-            {/* 👇 Profile avatar */}
             <Link href="/profile">
               <img
                 id="profile-avatar"
@@ -276,7 +273,6 @@ const Header: React.FC<HeaderProps> = ({ user, division: divisionProp }) => {
               />
             </Link>
 
-            {/* Logout */}
             <button
               onClick={async () => {
                 try {
