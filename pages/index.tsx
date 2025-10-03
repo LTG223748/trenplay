@@ -3,6 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
+import ParticlesBackground from "../components/ParticlesBackground"; // canvas-based purple orbit background
 
 export default function Landing() {
   const [stars, setStars] = useState<
@@ -37,7 +38,7 @@ export default function Landing() {
       </Head>
 
       <main className="relative min-h-screen bg-[#0b0720] text-white font-[Orbitron] overflow-hidden">
-        {/* ⭐ Starfield anchored */}
+        {/* ⭐ Starfield — background across whole site */}
         <div className="fixed inset-0 z-0 pointer-events-none">
           {stars.map((s) => (
             <div
@@ -54,11 +55,10 @@ export default function Landing() {
           ))}
         </div>
 
-        {/* Content */}
+        {/* 🔥 Content */}
         <div className="relative z-10">
           {/* Header */}
           <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-            {/* ✅ Logo with purple border + glow */}
             <div className="flex items-center">
               <Image
                 src="/images/trenplay-logo.png"
@@ -70,9 +70,7 @@ export default function Landing() {
               />
             </div>
 
-            {/* 🔥 Futuristic Button Box */}
             <div className="flex items-center gap-4 rounded-2xl border-2 border-purple-500 bg-purple-900/30 backdrop-blur-md px-6 py-3 shadow-[0_0_25px_rgba(168,85,247,0.6)]">
-              {/* Log in */}
               <Link
                 href="/login"
                 className="px-6 py-3 text-base font-semibold rounded-xl border-2 border-purple-400 text-purple-300 bg-purple-800/30 hover:bg-purple-700/40 hover:text-white shadow-[0_0_12px_rgba(168,85,247,0.6)] hover:shadow-[0_0_20px_rgba(168,85,247,0.9)] transition-all duration-300"
@@ -80,7 +78,6 @@ export default function Landing() {
                 Log in
               </Link>
 
-              {/* Sign up */}
               <Link
                 href="/signup"
                 className="relative overflow-hidden rounded-xl px-7 py-3 text-base font-bold text-black bg-gradient-to-r from-yellow-400 to-yellow-300 hover:from-yellow-300 hover:to-yellow-200 shadow-[0_0_25px_rgba(250,204,21,0.7)] hover:shadow-[0_0_35px_rgba(250,204,21,0.9)] transition-all duration-300"
@@ -91,9 +88,14 @@ export default function Landing() {
             </div>
           </header>
 
-          {/* Hero */}
-          <section className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-10 px-6 pb-20 pt-12 md:grid-cols-2">
-            <div>
+          {/* 🎯 Hero Section */}
+          <section className="relative mx-auto max-w-7xl px-6 pb-20 pt-12 grid grid-cols-1 items-center gap-10 md:grid-cols-2 overflow-hidden">
+            <div className="absolute inset-0 z-0">
+              <ParticlesBackground />
+            </div>
+
+            {/* Left Text */}
+            <div className="relative z-10">
               <h1 className="text-4xl font-extrabold leading-tight md:text-5xl text-purple-400">
                 TrenPlay — The Future of Console Competition
               </h1>
@@ -117,13 +119,66 @@ export default function Landing() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-purple-700/30 bg-purple-700/10 p-3">
-              <div className="aspect-video w-full rounded-xl bg-gradient-to-r from-purple-700 to-yellow-400 flex items-center justify-center text-2xl font-bold text-white">
+            {/* Right Preview Box */}
+            <div className="relative z-10 rounded-2xl border border-purple-700/30 bg-purple-700/10 p-3">
+              <div className="aspect-video w-full rounded-xl bg-gradient-to-r from-purple-700/70 to-yellow-400/70 backdrop-blur-sm flex items-center justify-center text-2xl font-bold text-white">
                 TrenPlay Preview
               </div>
               <p className="mt-3 text-center text-xs text-purple-300">
                 Your arena for console competition.
               </p>
+            </div>
+          </section>
+
+          {/* 🎮 Supported Games Carousel */}
+          <section className="relative mx-auto max-w-7xl px-6 pb-20">
+            <h2 className="text-2xl font-bold mb-6 text-purple-400 text-center">
+              Supported Games
+            </h2>
+            <div className="overflow-hidden">
+              <div className="flex animate-scroll gap-12">
+                {[
+                  { name: "NBA 2K", src: "/images/games/2k.png" },
+                  { name: "FIFA", src: "/images/games/fifa.png" },
+                  { name: "Madden", src: "/images/games/madden.png" },
+                  { name: "UFC", src: "/images/games/ufc.png" },
+                  { name: "Call of Duty", src: "/images/games/cod.png" },
+                ].map((game) => (
+                  <div
+                    key={game.name}
+                    className="flex-shrink-0 w-40 h-24 flex items-center justify-center bg-purple-700/20 border border-purple-500/30 rounded-xl shadow-md"
+                  >
+                    <Image
+                      src={game.src}
+                      alt={game.name}
+                      width={120}
+                      height={60}
+                      className="object-contain"
+                    />
+                  </div>
+                ))}
+                {/* Duplicate set for seamless looping */}
+                {[
+                  { name: "NBA 2K", src: "/images/games/2k.png" },
+                  { name: "FIFA", src: "/images/games/fifa.png" },
+                  { name: "Madden", src: "/images/games/madden.png" },
+                  { name: "UFC", src: "/images/games/ufc.png" },
+                  { name: "Call of Duty", src: "/images/games/cod.png" },
+                ].map((game) => (
+                  <div
+                    key={game.name + "-duplicate"}
+                    className="flex-shrink-0 w-40 h-24 flex items-center justify-center bg-purple-700/20 border border-purple-500/30 rounded-xl shadow-md"
+                  >
+                    <Image
+                      src={game.src}
+                      alt={game.name}
+                      width={120}
+                      height={60}
+                      className="object-contain"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           </section>
 
@@ -138,7 +193,8 @@ export default function Landing() {
                   Powered by TrenCoin
                 </h3>
                 <p className="text-purple-200">
-                  All matches use TrenCoin on Solana — fast, secure, and transparent.
+                  Your coins stay in your wallet. Win a match, get paid instantly.
+                  Fast, secure, and transparent.
                 </p>
               </div>
               <div className="rounded-xl border border-purple-700/30 bg-purple-700/10 p-6">
@@ -239,13 +295,42 @@ export default function Landing() {
             </ul>
           </section>
 
+          {/* Step-by-Step Guide */}
+          <section className="mx-auto max-w-5xl px-6 pb-24">
+            <h2 className="text-3xl md:text-4xl font-extrabold mb-10 text-center bg-gradient-to-r from-yellow-400 to-purple-400 bg-clip-text text-transparent">
+              How to Join Your First Match
+            </h2>
+            <ol className="space-y-8 text-purple-200">
+              {[
+                ["🔗", "Connect Your Wallet — Click 'Connect Wallet', choose your provider (Phantom, Solflare, etc.), and approve. Your wallet is now linked to TrenCoin."],
+                ["💰", "Fund Your Wallet (Optional) — Purchase or transfer TrenCoin via a Solana wallet/exchange. Balance updates instantly."],
+                ["🎮", "Browse Matches — Go to the Match Lobby, filter by game, and view open matches with stakes and rules."],
+                ["📝", "Join or Create a Match — Join an open match and confirm your stake, or create your own. TrenCoin is locked in secure escrow."],
+                ["💬", "Match Chat Setup (Important) — After joining, you’ll be taken to the Match Chat page. Confirm your team and gamertag/username, coordinate with your opponent, and set up the game. Once confirmed, you’ll be taken to the Match Page where you’ll later upload results."],
+                ["⚔️", "Compete — Play your opponent on Xbox/PS5 following the agreed rules."],
+                ["📸", "Submit Results — Upload a screenshot or clip on the Match Page. Our proof system + dispute logic verifies results."],
+                ["⚡", "Get Paid Instantly — If results match, winnings release instantly. If there’s a dispute, Admin Review ensures fairness."],
+              ].map(([icon, step], i) => (
+                <li key={i} className="flex items-start gap-4">
+                  <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-yellow-400 text-black font-bold">
+                    {i + 1}
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-xl mb-1">{icon}</span>
+                    <p className="text-base leading-relaxed">{step}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+
           {/* Footer */}
           <footer className="border-t border-purple-700/30 py-10 text-center text-xs text-purple-300">
             © {new Date().getFullYear()} TrenPlay •{" "}
             <Link href="/terms" className="underline hover:text-yellow-400">
               Terms
             </Link>{" "}
-            •{" "}
+              •{" "}
             <Link href="/privacy" className="underline hover:text-yellow-400">
               Privacy
             </Link>
@@ -253,7 +338,7 @@ export default function Landing() {
         </div>
       </main>
 
-      {/* ⭐ Twinkle animation */}
+      {/* Global animations */}
       <style jsx global>{`
         @keyframes twinkle {
           0%, 100% { opacity: 0; }
@@ -261,6 +346,15 @@ export default function Landing() {
         }
         .animate-twinkle {
           animation: twinkle 4s infinite ease-in-out;
+        }
+        @keyframes scroll {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-scroll {
+          display: flex;
+          width: max-content;
+          animation: scroll 20s linear infinite;
         }
       `}</style>
     </>
